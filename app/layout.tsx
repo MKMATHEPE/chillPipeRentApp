@@ -5,6 +5,7 @@ import './mobile.css';
 import './checkout.css';
 import './store.css';
 import './checkout-form.css';
+import './operations.css';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',

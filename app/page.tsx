@@ -4,7 +4,7 @@ import { ChevronDown, Clock3, Flame, MapPin, Minus, Package, Plus, Search, Shopp
 
 type Item = { id:string; name:string; description:string; price:number; category:'Rentals'|'Flavours'|'Extras'; badge?:string };
 const items:Item[]=[
-  {id:'pipe',name:'Classic hookah pipe',description:'A complete 24-hour rental, cleaned and ready to use.',price:450,category:'Rentals',badge:'Most popular'},
+  {id:'pipe',name:'Classic hookah pipe',description:'A complete 24-hour rental, cleaned and ready to use.',price:550,category:'Rentals',badge:'Most popular'},
   {id:'lady',name:'Lady Killer',description:'A bright, sweet fruit blend with a cool finish.',price:50,category:'Flavours'},
   {id:'gum',name:'Gum and Mint',description:'Fresh mint balanced with a smooth bubblegum note.',price:50,category:'Flavours'},
   {id:'cream',name:'Cream Mint',description:'Soft, creamy and refreshingly cool.',price:50,category:'Flavours'},
