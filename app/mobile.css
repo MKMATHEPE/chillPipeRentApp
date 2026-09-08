@@ -1,0 +1,73 @@
+@media (max-width: 700px) {
+  html, body { overflow-x: hidden; }
+  .site-header { height: 74px; padding: 0 16px; gap: 12px; position: sticky; top: 0; background: rgba(246,244,239,.97); backdrop-filter: blur(10px); }
+  .brand { flex: 0 0 auto; }
+  .brand img { width: 78px; height: 52px; }
+  .header-note { display: none; }
+  .main-nav { margin-left: auto; gap: 4px; }
+  .main-nav a { min-height: 40px; padding: 13px 8px 10px; font-size: 9px; letter-spacing: .025em; white-space: nowrap; }
+  .intro { padding: 42px 18px 38px; grid-template-columns: 1fr; gap: 20px; }
+  .intro h1 { font-size: clamp(42px, 13vw, 58px); line-height: .96; }
+  .intro > p { font-size: 14px; line-height: 1.65; }
+  .booking-layout { padding: 0 18px 56px; grid-template-columns: 1fr; gap: 30px; }
+  .section-block { padding: 32px 0 38px; }
+  .section-heading { grid-template-columns: 30px 1fr; gap: 8px; margin-bottom: 22px; }
+  .section-heading h2 { font-size: 24px; }
+  .product-row { min-height: 78px; gap: 12px; }
+  .product-row h3 { font-size: 14px; }
+  .product-row p { max-width: 150px; line-height: 1.4; }
+  .stepper { grid-template-columns: 38px 38px 38px; height: 42px; flex: 0 0 auto; }
+  .stepper button { min-width: 38px; min-height: 40px; }
+  .flavour-grid { grid-template-columns: 1fr; gap: 8px; }
+  .flavour { min-height: 52px; }
+  .form-grid { grid-template-columns: 1fr; gap: 18px; }
+  .form-grid .wide { grid-column: auto; }
+  .form-grid input, .form-grid textarea { min-height: 48px; font-size: 16px; }
+  .delivery-option { padding: 15px; }
+  .summary-column { position: static; }
+  .summary-card { padding: 28px 20px; }
+  .summary-card h2 { font-size: 28px; }
+  .summary-total strong { font-size: 32px; }
+  .request-button { min-height: 56px; }
+  .terms-preview summary { min-height: 54px; align-items: center; }
+  footer { padding: 26px 18px; gap: 12px; flex-wrap: wrap; }
+  footer img { width: 58px; }
+  footer p { font-size: 11px; }
+  footer span { width: 100%; margin-left: 0; padding-left: 70px; font-size: 9px; }
+  .success-shell { padding: 14px; align-items: start; }
+  .success-card { margin-top: 14px; padding: 30px 18px; }
+  .success-card h1 { font-size: 40px; }
+  .success-copy { font-size: 14px; }
+  .request-preview { max-height: 280px; padding: 14px; }
+  .success-actions { grid-template-columns: 1fr; }
+  .primary-button, .secondary-button { min-height: 56px; }
+  .editorial-hero, .terms-hero { padding: 44px 18px 40px; }
+  .editorial-hero h1, .terms-hero h1 { font-size: clamp(44px, 13vw, 58px); }
+  .editorial-hero > p:last-child { margin-top: 22px; font-size: 14px; }
+  .steps-grid { padding: 0 18px; grid-template-columns: 1fr; }
+  .step-card { min-height: 220px; padding: 28px 22px; border-left: 1px solid var(--line); }
+  .step-card h2 { margin-top: 52px; font-size: 24px; }
+  .closing-panel { margin: 38px 18px 58px; padding: 30px 22px; align-items: flex-start; flex-direction: column; }
+  .closing-panel a { width: 100%; justify-content: center; min-height: 54px; }
+  .terms-hero { grid-template-columns: 1fr; gap: 24px; }
+  .terms-hero > p { font-size: 14px; }
+  .terms-page { padding: 38px 18px 54px; grid-template-columns: 1fr; gap: 34px; }
+  .terms-intro { position: static; }
+  .terms-page li { grid-template-columns: 38px 1fr; gap: 10px; padding: 16px 0; }
+  .terms-page li p { font-size: 13px; }
+  .bank-strip { margin: 0 18px 50px; padding: 26px 20px; grid-template-columns: 1fr 1fr; gap: 22px 15px; }
+  .bank-strip p { grid-column: 1 / -1; }
+  .bank-strip strong { overflow-wrap: anywhere; }
+}
+
+@media (max-width: 380px) {
+  .site-header { padding: 0 11px; }
+  .brand img { width: 68px; }
+  .main-nav a { padding-left: 6px; padding-right: 6px; font-size: 8px; }
+  .intro, .booking-layout, .editorial-hero, .terms-hero, .terms-page, .steps-grid { padding-left: 14px; padding-right: 14px; }
+  .product-row p { max-width: 125px; }
+  .stepper { grid-template-columns: 34px 34px 34px; }
+  .summary-line { font-size: 12px; }
+  .bank-strip { grid-template-columns: 1fr; }
+  .bank-strip p { grid-column: auto; }
+}
