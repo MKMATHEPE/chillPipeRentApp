@@ -17,3 +17,28 @@
 .basket{padding-top:56px}
 @media(max-width:1060px) and (min-width:801px){.product-grid{grid-template-columns:1fr 1fr}}
 @media(max-width:800px){.app-header{height:64px}.app-logo img{width:66px;height:44px}.store-hero{min-height:174px;padding:24px 18px;align-items:center}.store-hero p{margin:0}.store-hero h1{font-size:36px;margin:8px 0}.store-hero>div>span{font-size:11px}.store-toolbar{padding:12px 14px 8px;top:64px}.store-toolbar label{height:42px}.category-row{margin-top:8px}.category-row button{height:32px;padding:0 13px}.catalog-heading{margin:15px 2px 12px}.catalog-heading h2{font-size:24px}.product-grid{grid-template-columns:1fr;gap:8px}.app-product{grid-template-columns:96px 1fr;min-height:116px}.product-visual{height:100%;min-height:116px}.product-visual img{width:74px;height:78px}.product-copy{padding:12px 10px 4px}.product-copy h3{font-size:14px}.product-copy strong{margin-top:3px;font-size:13px}.product-copy p{font-size:10px;line-height:1.35;margin-top:5px;padding-right:70px}.product-action{right:9px;bottom:9px}.product-action>button,.mini-stepper,.mini-stepper button{height:32px}.mini-stepper{grid-template-columns:32px 25px 32px}.mobile-cart{height:54px}}
+
+/* Editorial card system */
+.app-product{border-radius:2px;border-color:#d8d8d2;box-shadow:4px 4px 0 #111;transition:transform .18s,box-shadow .18s}
+.app-product:hover{transform:translate(-2px,-2px);box-shadow:7px 7px 0 #111}
+.product-visual{overflow:hidden;border-bottom:1px solid #111}
+.product-visual:after{content:"";position:absolute;width:76px;height:76px;border:1px solid rgba(0,0,0,.16);border-radius:50%;right:-21px;bottom:-26px}
+.product-visual i{position:absolute;top:10px;right:11px;font:italic 11px Georgia,serif;color:#777;z-index:2}
+.product-copy>small{display:block;font-size:8px;letter-spacing:.13em;text-transform:uppercase;color:#777;margin-bottom:7px}
+.card-rentals{grid-column:span 2;display:grid;grid-template-columns:minmax(190px,.85fr) 1.15fr;grid-template-rows:1fr auto;background:#111;color:#fff;box-shadow:4px 4px 0 #a7a7a1}
+.card-rentals:hover{box-shadow:7px 7px 0 #a7a7a1}
+.card-rentals .product-visual{height:100%;grid-row:1/3;background:#e9e8e2;border:0;border-right:1px solid #555}
+.card-rentals .product-visual img{width:145px;height:120px}
+.card-rentals .product-copy{padding:22px 20px 6px}
+.card-rentals .product-copy>small,.card-rentals .product-copy p{color:#aaa}
+.card-rentals .product-copy h3{font:400 25px Georgia,serif}
+.card-rentals .product-action{padding:8px 20px 18px}
+.card-rentals .product-action>button{background:#fff;color:#111;border-color:#fff}
+.card-flavours .product-visual{background:repeating-linear-gradient(135deg,#f0efe9,#f0efe9 12px,#e6e5df 12px,#e6e5df 13px)}
+.card-flavours .product-visual>svg{background:#111;color:#fff;width:52px;height:52px;padding:15px;border-radius:50%}
+.card-extras .product-visual{background:#111;color:#fff}
+.card-extras .product-visual:after{border-color:#777}
+.card-extras .product-visual i{color:#999}
+.item-stove .product-visual{background:#d7d6d0;color:#111}
+@media(max-width:1060px) and (min-width:801px){.card-rentals{grid-column:1/-1}}
+@media(max-width:800px){.app-product{box-shadow:3px 3px 0 #111}.app-product:hover{transform:none;box-shadow:3px 3px 0 #111}.card-rentals{grid-column:auto;display:grid;grid-template-columns:96px 1fr;grid-template-rows:1fr;min-height:126px}.card-rentals .product-visual{grid-row:auto;height:100%;border-right:1px solid #555}.card-rentals .product-visual img{width:78px;height:82px}.card-rentals .product-copy{padding:13px 10px 4px}.card-rentals .product-copy h3{font:600 14px var(--font-geist-sans),sans-serif}.card-rentals .product-action{padding:0;right:9px;bottom:9px}.product-copy>small{font-size:7px;margin-bottom:5px}.product-visual i{top:auto;right:7px;bottom:7px}}
