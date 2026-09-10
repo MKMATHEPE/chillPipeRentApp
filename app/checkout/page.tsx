@@ -11,9 +11,10 @@ const money = (value: number) => `R${value.toLocaleString('en-ZA')}`;
 export default function Checkout() {
   const [order, setOrder] = useState<Order | null>(null);
   const [accepted, setAccepted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   useEffect(() => { const raw = localStorage.getItem('chill-pipe-order'); if (raw) setOrder(JSON.parse(raw)); }, []);
   function updateCustomer(field: keyof Order['customer'], value: string) { setOrder(current => current ? { ...current, customer: { ...current.customer, [field]: value } } : current); }
-  function placeOrder() { if (!order) return; const reference = `CP-${Date.now().toString().slice(-6)}`; localStorage.setItem('chill-pipe-booking', JSON.stringify({ ...order, reference, status: 'awaiting_review', deposit: (order.quantities.pipe || 0) * 308, deliveryFee: null })); window.location.href = '/track'; }
+  async function placeOrder() { if (!order||submitting) return; setSubmitting(true);try{const response=await fetch('/api/bookings',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(order)});const booking=await response.json();if(!response.ok)throw new Error(booking.error||'Could not create booking.');localStorage.setItem('chill-pipe-booking-access',JSON.stringify({reference:booking.reference,phone:order.customer.phone}));window.location.href=`/track?reference=${encodeURIComponent(booking.reference)}&phone=${encodeURIComponent(order.customer.phone)}`;}catch(error){alert(error instanceof Error?error.message:'Could not create booking.');setSubmitting(false)} }
   const lines = useMemo(() => order ? Object.entries(order.quantities).filter(([,q]) => q > 0).map(([id,q]) => ({ name:names[id], qty:q, amount:q*prices[id] })) : [], [order]);
   if (!order) return <main className="empty-cart"><ShoppingBag size={34}/><p className="eyebrow">Your cart is empty</p><h1>Build your rental first.</h1><a href="/">Start an order</a></main>;
   const ready = accepted && Boolean(order.customer.name && order.customer.phone && order.customer.date && order.customer.location);
