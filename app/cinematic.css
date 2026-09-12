@@ -661,6 +661,45 @@
   font-size: 11px;
   font-weight: 700;
 }
+.delivery-address-summary {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr) 20px;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 58px;
+  margin-top: 7px;
+  padding: 8px 10px;
+  border: 1px solid #d4d2ce;
+  border-radius: 14px;
+  background: #fff;
+  color: #111;
+  text-align: left;
+}
+.delivery-address-summary > svg {
+  width: 18px;
+}
+.delivery-address-summary > span {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 3px;
+}
+.delivery-address-summary strong {
+  font-size: 11px;
+}
+.delivery-address-summary small {
+  overflow: hidden;
+  color: #666;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.delivery-address-summary > i {
+  font-size: 16px;
+  font-style: normal;
+  text-align: center;
+}
 .delivery-details-toggle i {
   font-size: 16px;
   font-style: normal;
@@ -671,6 +710,9 @@
   border: 1px solid #ddd;
   border-radius: 14px;
   background: #fff;
+}
+.delivery-details-panel.address-panel {
+  padding-top: 2px;
 }
 .delivery-details-done {
   width: 100%;

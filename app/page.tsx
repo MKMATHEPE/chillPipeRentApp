@@ -848,79 +848,124 @@ export default function BookingFlow() {
             />
           </span>
         </label>
-        <label
-          className={
-            delivery
-              ? 'booking-row delivery-address-row'
-              : 'booking-row collection-location-row'
-          }
-        >
-          <MapPin />
-          <span>
-            {delivery ? 'Delivery address' : 'Collection location'}
-            <span className="booking-input-action">
-              <input
-                required
-                value={address}
-                readOnly={!delivery}
-                onChange={(e) => {
-                  setAddress(e.target.value);
-                  setDeliveryAddress(e.target.value);
-                  setLocationPinned(false);
-                }}
-                placeholder={
-                  delivery ? 'Enter delivery address' : COLLECTION_LOCATION
-                }
-              />
-              {delivery && (
-                <button
-                  type="button"
-                  aria-label="Use my current location"
-                  onClick={(event) => {
-                    event.preventDefault();
-                    if (!navigator.geolocation) {
-                      setLocationStatus(
-                        'Location is not available on this device.',
-                      );
-                      return;
-                    }
-                    setLocationStatus('');
-                    navigator.geolocation.getCurrentPosition(
-                      ({ coords }) => {
-                        const pinned = `${coords.latitude.toFixed(6)}, ${coords.longitude.toFixed(6)}`;
-                        setAddress(pinned);
-                        setDeliveryAddress(pinned);
-                        setLocationPinned(true);
-                        setLocationStatus('');
-                      },
-                      () =>
-                        setLocationStatus('Location access was not granted.'),
-                    );
-                  }}
-                >
-                  {locationPinned ? <Check /> : <MapPin />}
-                </button>
-              )}
-            </span>
-          </span>
-        </label>
         {delivery ? (
           <>
-            {locationStatus && (
-              <small className="location-status error">{locationStatus}</small>
-            )}
-            <label className="booking-row">
+            <button
+              className="delivery-address-summary"
+              type="button"
+              onClick={() => setShowDeliveryDetails((current) => !current)}
+              aria-expanded={showDeliveryDetails}
+            >
               <MapPin />
               <span>
-                Area / suburb
-                <input
-                  required
-                  value={suburb}
-                  onChange={(e) => setSuburb(e.target.value)}
-                  placeholder="e.g. Midrand"
-                />
+                <strong>Delivery address</strong>
+                <small>
+                  {address && suburb
+                    ? [unit, address, suburb].filter(Boolean).join(', ')
+                    : 'Add street address and area'}
+                  {deliveryInstructions ? ' · Instructions added' : ''}
+                </small>
               </span>
-            </label>
+              <i>{showDeliveryDetails ? '−' : '+'}</i>
+            </button>
+            {showDeliveryDetails && (
+              <section className="delivery-details-panel address-panel">
+                <label className="booking-row delivery-address-row">
+                  <MapPin />
+                  <span>
+                    Street address
+                    <span className="booking-input-action">
+                      <input
+                        required
+                        value={address}
+                        onChange={(e) => {
+                          setAddress(e.target.value);
+                          setDeliveryAddress(e.target.value);
+                          setLocationPinned(false);
+                        }}
+                        placeholder="Street name and number"
+                      />
+                      <button
+                        type="button"
+                        aria-label="Use my current location"
+                        onClick={(event) => {
+                          event.preventDefault();
+                          if (!navigator.geolocation) {
+                            setLocationStatus(
+                              'Location is not available on this device.',
+                            );
+                            return;
+                          }
+                          setLocationStatus('');
+                          navigator.geolocation.getCurrentPosition(
+                            ({ coords }) => {
+                              const pinned = `${coords.latitude.toFixed(6)}, ${coords.longitude.toFixed(6)}`;
+                              setAddress(pinned);
+                              setDeliveryAddress(pinned);
+                              setLocationPinned(true);
+                            },
+                            () =>
+                              setLocationStatus(
+                                'Location access was not granted.',
+                              ),
+                          );
+                        }}
+                      >
+                        {locationPinned ? <Check /> : <MapPin />}
+                      </button>
+                    </span>
+                  </span>
+                </label>
+                {locationStatus && (
+                  <small className="location-status error">
+                    {locationStatus}
+                  </small>
+                )}
+                <label className="booking-row">
+                  <MapPin />
+                  <span>
+                    Area / suburb
+                    <input
+                      required
+                      value={suburb}
+                      onChange={(e) => setSuburb(e.target.value)}
+                      placeholder="e.g. Midrand"
+                    />
+                  </span>
+                </label>
+                <label className="booking-row">
+                  <Home />
+                  <span>
+                    Building / unit <i>Optional</i>
+                    <input
+                      value={unit}
+                      onChange={(e) => setUnit(e.target.value)}
+                      placeholder="Complex, unit or floor"
+                    />
+                  </span>
+                </label>
+                <label className="booking-row delivery-notes-row">
+                  <MessageCircle />
+                  <span>
+                    Delivery instructions <i>Optional</i>
+                    <input
+                      value={deliveryInstructions}
+                      onChange={(e) =>
+                        setDeliveryInstructions(e.target.value)
+                      }
+                      placeholder="Gate code, landmark or entrance"
+                    />
+                  </span>
+                </label>
+                <button
+                  className="delivery-details-done"
+                  type="button"
+                  onClick={() => setShowDeliveryDetails(false)}
+                >
+                  Save address
+                </button>
+              </section>
+            )}
             <div className="collection-schedule">
               <label className="booking-row">
                 <Clock3 />
@@ -966,89 +1011,41 @@ export default function BookingFlow() {
                 </span>
               </label>
             </div>
-            <button
-              className="delivery-details-toggle"
-              type="button"
-              onClick={() => setShowDeliveryDetails((current) => !current)}
-              aria-expanded={showDeliveryDetails}
+            <section
+              className="delivery-return"
+              aria-label="Equipment return method"
             >
-              <span>
-                {unit || deliveryInstructions
-                  ? [
-                      unit || null,
-                      deliveryInstructions ? 'Instructions added' : null,
-                    ]
-                      .filter(Boolean)
-                      .join(' · ')
-                  : '+ Add delivery details'}
-              </span>
-              <i>{showDeliveryDetails ? '−' : '+'}</i>
-            </button>
-            {showDeliveryDetails && (
-              <section className="delivery-details-panel">
-                <label className="booking-row">
-                  <Home />
-                  <span>
-                    Building / unit <i>Optional</i>
-                    <input
-                      value={unit}
-                      onChange={(e) => setUnit(e.target.value)}
-                      placeholder="Complex, unit or floor"
-                    />
-                  </span>
-                </label>
-                <label className="booking-row delivery-notes-row">
-                  <MessageCircle />
-                  <span>
-                    Delivery instructions <i>Optional</i>
-                    <input
-                      value={deliveryInstructions}
-                      onChange={(e) =>
-                        setDeliveryInstructions(e.target.value)
-                      }
-                      placeholder="Gate code, landmark or entrance"
-                    />
-                  </span>
-                </label>
-                <section
-                  className="delivery-return"
-                  aria-label="Equipment return method"
-                >
-                  <strong>How will the equipment be returned?</strong>
-                  <div>
-                    <button
-                      type="button"
-                      className={returnMethod === 'self' ? 'selected' : ''}
-                      onClick={() => setReturnMethod('self')}
-                    >
-                      Return in Vorna Valley
-                    </button>
-                    <button
-                      type="button"
-                      className={
-                        returnMethod === 'collection' ? 'selected' : ''
-                      }
-                      onClick={() => setReturnMethod('collection')}
-                    >
-                      Request paid collection
-                    </button>
-                  </div>
-                </section>
+              <strong>How will the equipment be returned?</strong>
+              <div>
                 <button
-                  className="delivery-details-done"
                   type="button"
-                  onClick={() => setShowDeliveryDetails(false)}
+                  className={returnMethod === 'self' ? 'selected' : ''}
+                  onClick={() => setReturnMethod('self')}
                 >
-                  Done
+                  Return in Vorna Valley
                 </button>
-              </section>
-            )}
+                <button
+                  type="button"
+                  className={returnMethod === 'collection' ? 'selected' : ''}
+                  onClick={() => setReturnMethod('collection')}
+                >
+                  Request paid collection
+                </button>
+              </div>
+            </section>
             <p className="delivery-fee-note">
               Fee confirmed after approval · Keep your phone reachable
             </p>
           </>
         ) : (
           <>
+            <label className="booking-row collection-location-row">
+              <MapPin />
+              <span>
+                Collection location
+                <input required value={address} readOnly />
+              </span>
+            </label>
             <div className="collection-schedule">
               <label className="booking-row">
                 <Clock3 />
