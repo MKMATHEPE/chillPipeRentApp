@@ -97,6 +97,7 @@ export default function Checkout() {
     0,
   );
   const suggestedFlavours = order.suggestedFlavours || [];
+  const standardDeliveryFee = order.delivery ? 350 : 0;
   if (!order)
     return (
       <main className="empty-cart">
@@ -198,12 +199,23 @@ export default function Checkout() {
             <span>
               {order.delivery ? 'Delivery & collection' : 'Customer collection'}
             </span>
-            <strong>{order.delivery ? 'TBC' : 'Included'}</strong>
+            <strong>
+              {order.delivery ? money(standardDeliveryFee) : 'Included'}
+            </strong>
           </div>
+          {order.delivery ? (
+            <p className="checkout-flavour-list">
+              Reduced to R250 when the confirmed address is within 15 km.
+            </p>
+          ) : null}
           <div className="checkout-total">
             <span>Due after approval</span>
             <strong>
-              {money(order.total + (order.quantities.pipe || 0) * 308)}
+              {money(
+                order.total +
+                  (order.quantities.pipe || 0) * 308 +
+                  standardDeliveryFee,
+              )}
             </strong>
           </div>
           <div className="checkout-session-details">
@@ -231,7 +243,7 @@ export default function Checkout() {
               </strong>
               <p>
                 {order.delivery
-                  ? 'The charge will be confirmed for your location before payment.'
+                  ? 'R350 standard fee. R250 when the confirmed address is within 15 km.'
                   : 'Collection and return details will be confirmed with you.'}
               </p>
             </div>

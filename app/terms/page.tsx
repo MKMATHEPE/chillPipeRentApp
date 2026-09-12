@@ -7,7 +7,7 @@ const terms = [
   'Consumables do not need to be returned.',
   'Costs for lost, damaged or broken equipment will be deducted from the security deposit.',
   'The remaining deposit balance will be refunded within 24–48 hours after the returned equipment has been inspected and found to be in good condition.',
-  'Delivery is available at an additional charge quoted according to the client’s location. Customer collection from Vorna Valley is included.',
+  'The standard delivery and equipment collection fee is R350. A reduced R250 fee applies when the confirmed address is within a 15 km radius. Customer collection from Vorna Valley is included.',
   'Cancellations made at least 48 hours before the booking time receive a full refund. Later cancellations incur a 20% cancellation fee, with 80% of the amount paid refunded.',
   'For collection bookings, R25 is charged for every 30 minutes after the confirmed collection time.',
   'A missed collection is cancelled after 12 hours or at 23:59 on the collection date, whichever comes first. The security deposit is refunded in full, and 35% of the rental payment is refunded.',

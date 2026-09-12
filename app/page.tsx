@@ -307,9 +307,6 @@ export default function BookingFlow() {
   const [suburb, setSuburb] = useState('');
   const [unit, setUnit] = useState('');
   const [deliveryInstructions, setDeliveryInstructions] = useState('');
-  const [returnMethod, setReturnMethod] = useState<'self' | 'collection'>(
-    'self',
-  );
   const [locationStatus, setLocationStatus] = useState('');
   const [locationPinned, setLocationPinned] = useState(false);
   const [showDeliveryDetails, setShowDeliveryDetails] = useState(false);
@@ -352,9 +349,6 @@ export default function BookingFlow() {
         setSuburb(draft.suburb || '');
         setUnit(draft.unit || '');
         setDeliveryInstructions(draft.deliveryInstructions || '');
-        setReturnMethod(
-          draft.returnMethod === 'collection' ? 'collection' : 'self',
-        );
         setDate(draft.date || '');
         if (Array.isArray(draft.suggestions)) {
           setSuggestions(draft.suggestions);
@@ -388,7 +382,6 @@ export default function BookingFlow() {
           suburb,
           unit,
           deliveryInstructions,
-          returnMethod,
           date,
           suggestions,
         }),
@@ -403,7 +396,6 @@ export default function BookingFlow() {
     suburb,
     unit,
     deliveryInstructions,
-    returnMethod,
     date,
     suggestions,
   ]);
@@ -511,13 +503,6 @@ export default function BookingFlow() {
               : '',
             delivery && deliveryInstructions.trim()
               ? `Delivery instructions: ${deliveryInstructions.trim()}`
-              : '',
-            delivery
-              ? `Return method: ${
-                  returnMethod === 'self'
-                    ? 'Customer return to Vorna Valley'
-                    : 'Paid equipment collection requested'
-                }`
               : '',
           ]
             .filter(Boolean)
@@ -1011,30 +996,8 @@ export default function BookingFlow() {
                 </span>
               </label>
             </div>
-            <section
-              className="delivery-return"
-              aria-label="Equipment return method"
-            >
-              <strong>How will the equipment be returned?</strong>
-              <div>
-                <button
-                  type="button"
-                  className={returnMethod === 'self' ? 'selected' : ''}
-                  onClick={() => setReturnMethod('self')}
-                >
-                  Return in Vorna Valley
-                </button>
-                <button
-                  type="button"
-                  className={returnMethod === 'collection' ? 'selected' : ''}
-                  onClick={() => setReturnMethod('collection')}
-                >
-                  Request paid collection
-                </button>
-              </div>
-            </section>
             <p className="delivery-fee-note">
-              Fee confirmed after approval · Keep your phone reachable
+              R350 delivery & collection · R250 within 15 km
             </p>
           </>
         ) : (
