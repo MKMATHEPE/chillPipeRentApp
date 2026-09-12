@@ -773,7 +773,7 @@ export default function BookingFlow() {
             selected={delivery}
             icon={Truck}
             title="Delivery"
-            copy="We bring the vibes to you."
+            copy="Delivered to you"
             onClick={() => {
               setDelivery(true);
               setAddress(deliveryAddress);
@@ -783,7 +783,7 @@ export default function BookingFlow() {
             selected={!delivery}
             icon={Store}
             title="Collection"
-            copy="Pick up and get smoking."
+            copy="Collect in Vorna Valley"
             onClick={() => {
               if (delivery) setDeliveryAddress(address);
               setDelivery(false);
@@ -893,20 +893,18 @@ export default function BookingFlow() {
                 </span>
               </label>
             </div>
-            <section className="collection-details" aria-label="Collection details">
-              <div>
-                <strong>Collection details</strong>
-                <span>
-                  Available slots are confirmed when your booking is approved.
-                </span>
-              </div>
+            <section
+              className="collection-details"
+              aria-label="Collection details"
+            >
+              <span>Vorna Valley · Slots confirmed after approval</span>
               <a
                 className="collection-whatsapp"
                 href={`https://wa.me/${COLLECTION_WHATSAPP}?text=${encodeURIComponent("Hi The Chill Pipe, I'm contacting you about my collection.")}`}
                 target="_blank"
                 rel="noreferrer"
               >
-                <MessageCircle /> Contact collection point
+                <MessageCircle /> WhatsApp us
               </a>
             </section>
           </>
