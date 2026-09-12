@@ -557,6 +557,45 @@
 .collection-schedule .booking-row {
   grid-template-columns: 28px 1fr;
 }
+.collection-details {
+  display: grid;
+  gap: 1px;
+  margin-top: 16px;
+  overflow: hidden;
+  border: 1px solid #d8d6d2;
+  border-radius: 17px;
+  background: #d8d6d2;
+}
+.collection-details > div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 11px 14px;
+  background: #fff;
+}
+.collection-details strong {
+  font-size: 12px;
+}
+.collection-details span {
+  color: #666;
+  font-size: 11px;
+  line-height: 1.45;
+}
+.collection-whatsapp {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 14px;
+  background: #111;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+}
+.collection-whatsapp svg {
+  width: 16px;
+}
 .delivery-sheet .flow-primary {
   margin-top: 24px;
 }

@@ -74,7 +74,9 @@ const flavours: Flavour[] = [
   },
 ];
 const money = (n: number) => `R${n.toLocaleString('en-ZA')}`;
-const COLLECTION_LOCATION = 'Vorna Valley';
+const COLLECTION_LOCATION =
+  'Bel Aire, Langeveld Street, Vorna Valley, Johannesburg, South Africa';
+const COLLECTION_WHATSAPP = '27768505523';
 const collectionTimeSlots = Array.from({ length: 18 }, (_, index) => {
   const totalMinutes = 10 * 60 + index * 30;
   const hours = Math.floor(totalMinutes / 60)
@@ -83,6 +85,20 @@ const collectionTimeSlots = Array.from({ length: 18 }, (_, index) => {
   const minutes = (totalMinutes % 60).toString().padStart(2, '0');
   return `${hours}:${minutes}`;
 });
+const localDateValue = (value = new Date()) => {
+  const offset = value.getTimezoneOffset() * 60_000;
+  return new Date(value.getTime() - offset).toISOString().slice(0, 10);
+};
+const collectionReturn = (value: string) => {
+  if (!value.includes('T')) return '';
+  const returnAt = new Date(value);
+  if (Number.isNaN(returnAt.getTime())) return '';
+  returnAt.setHours(returnAt.getHours() + 24);
+  return returnAt.toLocaleString('en-ZA', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  });
+};
 
 function BrandLogo() {
   return (
@@ -309,6 +325,9 @@ export default function BookingFlow() {
     [pipeQty, flavourUnits],
   );
   const cart = pipeQty + flavourUnits;
+  const collectionDay = date.split('T')[0] || '';
+  const collectionTime = date.split('T')[1] || '';
+  const returnDue = !delivery ? collectionReturn(date) : '';
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const requested = params.get('step');
@@ -434,9 +453,12 @@ export default function BookingFlow() {
     setEditingSuggestion(null);
   }
   function finish() {
+    const collectionDate = new Date(date);
     const validCollectionTime =
       delivery ||
-      (date.includes('T') && collectionTimeSlots.includes(date.split('T')[1]));
+      (date.includes('T') &&
+        collectionTimeSlots.includes(date.split('T')[1]) &&
+        collectionDate.getTime() > Date.now());
     if (!phone.trim() || !address.trim() || !date || !validCollectionTime) {
       navigateStep('delivery');
       return;
@@ -825,44 +847,100 @@ export default function BookingFlow() {
             </span>
           </label>
         ) : (
-          <div className="collection-schedule">
-            <label className="booking-row">
-              <Clock3 />
-              <span>
-                Collection date
-                <input
-                  required
-                  type="date"
-                  value={date.split('T')[0] || ''}
-                  onChange={(e) => {
-                    const time = date.split('T')[1] || '';
-                    setDate(time ? `${e.target.value}T${time}` : e.target.value);
-                  }}
-                />
-              </span>
-            </label>
-            <label className="booking-row">
-              <Clock3 />
-              <span>
-                Collection time
-                <select
-                  required
-                  value={date.split('T')[1] || ''}
-                  onChange={(e) => {
-                    const day = date.split('T')[0] || '';
-                    setDate(day ? `${day}T${e.target.value}` : '');
-                  }}
-                >
-                  <option value="">Select a time</option>
-                  {collectionTimeSlots.map((time) => (
-                    <option key={time} value={time}>
-                      {time}
-                    </option>
-                  ))}
-                </select>
-              </span>
-            </label>
-          </div>
+          <>
+            <div className="collection-schedule">
+              <label className="booking-row">
+                <Clock3 />
+                <span>
+                  Collection date
+                  <input
+                    required
+                    min={localDateValue()}
+                    type="date"
+                    value={collectionDay}
+                    onChange={(e) => {
+                      const nextDay = e.target.value;
+                      const nextDate = collectionTime
+                        ? `${nextDay}T${collectionTime}`
+                        : nextDay;
+                      setDate(
+                        nextDate && new Date(nextDate).getTime() > Date.now()
+                          ? nextDate
+                          : nextDay,
+                      );
+                    }}
+                  />
+                </span>
+              </label>
+              <label className="booking-row">
+                <Clock3 />
+                <span>
+                  Collection time
+                  <select
+                    required
+                    value={collectionTime}
+                    onChange={(e) =>
+                      setDate(
+                        collectionDay
+                          ? `${collectionDay}T${e.target.value}`
+                          : '',
+                      )
+                    }
+                  >
+                    <option value="">Select a time</option>
+                    {collectionTimeSlots.map((time) => {
+                      const elapsed =
+                        !collectionDay ||
+                        new Date(`${collectionDay}T${time}`).getTime() <=
+                          Date.now();
+                      return (
+                        <option key={time} value={time} disabled={elapsed}>
+                          {time}
+                          {elapsed && collectionDay ? ' — unavailable' : ''}
+                        </option>
+                      );
+                    })}
+                  </select>
+                </span>
+              </label>
+            </div>
+            <section className="collection-details" aria-label="Collection details">
+              <div>
+                <strong>Collection details</strong>
+                <span>
+                  Available slots are confirmed when your booking is approved.
+                </span>
+              </div>
+              {returnDue && (
+                <div>
+                  <strong>Return by</strong>
+                  <span>{returnDue} · 24-hour rental</span>
+                </div>
+              )}
+              <div>
+                <strong>Running late?</strong>
+                <span>
+                  R25 is charged for every 30 minutes after your collection time.
+                </span>
+              </div>
+              <div>
+                <strong>Missed collection</strong>
+                <span>
+                  The booking is cancelled after 12 hours or at 23:59 that day,
+                  whichever comes first. Your deposit is refunded in full and 35%
+                  of the rental payment is refunded.
+                </span>
+              </div>
+              <a
+                className="collection-whatsapp"
+                href={`https://wa.me/${COLLECTION_WHATSAPP}?text=${encodeURIComponent("Hi The Chill Pipe, I'm contacting you about my collection.")}`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                <MessageCircle /> Contact collection point
+              </a>
+            </section>
+          </>
         )}
         <PrimaryButton onClick={finish}>Continue</PrimaryButton>
         <small className="relax-copy">Relax. We handle the rest.</small>
