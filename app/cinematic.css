@@ -552,6 +552,18 @@
 .booking-row input[readonly] {
   font-weight: 600;
 }
+.collection-location-row span {
+  min-width: 0;
+  font-size: 10px;
+}
+.collection-location-row input {
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .booking-row select {
   width: 100%;
 }

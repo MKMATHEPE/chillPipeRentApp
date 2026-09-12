@@ -804,7 +804,11 @@ export default function BookingFlow() {
             />
           </span>
         </label>
-        <label className="booking-row">
+        <label
+          className={
+            delivery ? 'booking-row' : 'booking-row collection-location-row'
+          }
+        >
           <MapPin />
           <span>
             {delivery ? 'Delivery address' : 'Collection location'}
