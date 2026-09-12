@@ -8,6 +8,7 @@ import './checkout-form.css';
 import './operations.css';
 import './app-shell.css';
 import './cinematic.css';
+import './delivery-page.css';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',

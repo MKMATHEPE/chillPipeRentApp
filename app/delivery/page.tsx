@@ -1,0 +1,10 @@
+import { ArrowRight, Check, Clock3, MapPin, PackageCheck, Store, Truck } from 'lucide-react';
+import AppDock from '../components/AppDock';
+
+const details = [
+  { icon: MapPin, title: 'Quoted for your location', text: 'Send your delivery address with the order. We confirm the delivery and collection charge before payment.' },
+  { icon: Clock3, title: 'Scheduled around your booking', text: 'We agree on a delivery window and collect the equipment after the 24-hour rental period.' },
+  { icon: PackageCheck, title: 'Checked at handover', text: 'Your setup is checked with you at delivery or collection, so everything is ready for your session.' },
+];
+
+export default function DeliveryPage(){return <main className="delivery-info-page"><header className="delivery-info-head"><a className="flow-brand" href="/" aria-label="The Chill Pipe home"><img src="/chill-pipe-logo.webp" alt="The Chill Pipe"/><span>Hookah rentals</span></a><a href="/">Start order <ArrowRight/></a></header><section className="delivery-info-hero"><p>Delivery & collection</p><h1>Your setup,<br/><em>where you need it.</em></h1><span>Choose delivery or collect from us. Final arrangements are confirmed personally before you pay.</span></section><section className="fulfilment-choices"><article><span><Truck/></span><div><p>Door-to-door</p><h2>Delivery & collection</h2><p>We bring your complete setup and collect the reusable equipment after your rental.</p><strong>Charge confirmed by location</strong></div></article><article><span><Store/></span><div><p>Pick it up</p><h2>Customer collection</h2><p>Collect and return your setup at the agreed place and time.</p><strong>No delivery charge</strong></div></article></section><section className="delivery-detail-list">{details.map(({icon:Icon,title,text})=><article key={title}><span><Icon/></span><div><h3>{title}</h3><p>{text}</p></div><Check/></article>)}</section><section className="delivery-info-cta"><div><p>Ready to book?</p><h2>Build your 24-hour rental.</h2></div><a href="/">Choose your setup <ArrowRight/></a></section><AppDock active="delivery"/></main>}
