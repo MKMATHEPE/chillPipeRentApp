@@ -938,17 +938,17 @@
   object-fit: cover;
 }
 .flow-home-hero {
-  height: 420px;
+  height: 350px;
 }
 .flow-home-hero > div {
-  bottom: 82px;
+  bottom: 68px;
 }
 .product-sheet {
   margin-top: -60px;
 }
 @media (min-width: 900px) {
   .flow-home-hero {
-    height: 380px;
+    height: 340px;
   }
 }
 .flavours-head {
