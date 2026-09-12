@@ -11,9 +11,11 @@ import {
 } from 'lucide-react';
 
 type FlavourItem = string | { name: string; quantity: number };
+type SuggestedFlavour = { name: string; details: string; quantity: number };
 type Order = {
   quantities: Record<string, number>;
   selectedFlavours: FlavourItem[];
+  suggestedFlavours?: SuggestedFlavour[];
   delivery: boolean;
   customer: {
     name: string;
@@ -94,6 +96,7 @@ export default function Checkout() {
     (sum, item) => sum + item.quantity,
     0,
   );
+  const suggestedFlavours = order.suggestedFlavours || [];
   if (!order)
     return (
       <main className="empty-cart">
@@ -172,6 +175,20 @@ export default function Checkout() {
                 .map((item) => `${item.name} × ${item.quantity}`)
                 .join(' · ')}
             </p>
+          ) : null}
+          {suggestedFlavours.length > 0 ? (
+            <div className="checkout-suggestions">
+              <strong>Suggested flavours</strong>
+              {suggestedFlavours.map((item, index) => (
+                <div key={`${item.name}-${index}`}>
+                  <span>
+                    {item.name} × {item.quantity}
+                    {item.details ? <small>{item.details}</small> : null}
+                  </span>
+                  <em>Pending confirmation</em>
+                </div>
+              ))}
+            </div>
           ) : null}
           <div className="checkout-line">
             <span>Refundable deposit</span>

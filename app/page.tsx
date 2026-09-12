@@ -11,15 +11,18 @@ import {
   MessageCircle,
   MessageSquarePlus,
   Minus,
+  Pencil,
   Plus,
   ShoppingBag,
   Store,
   Truck,
+  Trash2,
   X,
 } from 'lucide-react';
 
 type Step = 'home' | 'flavours' | 'delivery';
 type Flavour = { id: string; name: string; description: string; image: string };
+type SuggestedFlavour = { name: string; details: string; quantity: number };
 const flavours: Flavour[] = [
   {
     id: 'lady',
@@ -276,8 +279,13 @@ export default function BookingFlow() {
     gum: 1,
   });
   const [showSuggestion, setShowSuggestion] = useState(false);
-  const [flavourSuggestion, setFlavourSuggestion] = useState('');
+  const [suggestions, setSuggestions] = useState<SuggestedFlavour[]>([]);
+  const [suggestionName, setSuggestionName] = useState('');
   const [suggestionDetails, setSuggestionDetails] = useState('');
+  const [suggestionQuantity, setSuggestionQuantity] = useState(1);
+  const [editingSuggestion, setEditingSuggestion] = useState<number | null>(
+    null,
+  );
   const [delivery, setDelivery] = useState(true);
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
@@ -314,8 +322,17 @@ export default function BookingFlow() {
         setPhone(draft.phone || '');
         setAddress(draft.address || '');
         setDate(draft.date || '');
-        setFlavourSuggestion(draft.flavourSuggestion || '');
-        setSuggestionDetails(draft.suggestionDetails || '');
+        if (Array.isArray(draft.suggestions)) {
+          setSuggestions(draft.suggestions);
+        } else if (draft.flavourSuggestion) {
+          setSuggestions([
+            {
+              name: draft.flavourSuggestion,
+              details: draft.suggestionDetails || '',
+              quantity: 1,
+            },
+          ]);
+        }
       } catch {
         localStorage.removeItem('chill-pipe-draft');
       }
@@ -335,8 +352,7 @@ export default function BookingFlow() {
           phone,
           address,
           date,
-          flavourSuggestion,
-          suggestionDetails,
+          suggestions,
         }),
       );
   }, [
@@ -347,8 +363,7 @@ export default function BookingFlow() {
     phone,
     address,
     date,
-    flavourSuggestion,
-    suggestionDetails,
+    suggestions,
   ]);
   function navigateStep(next: Step) {
     setStep(next);
@@ -365,6 +380,39 @@ export default function BookingFlow() {
       return next;
     });
   }
+  function startNewSuggestion() {
+    setSuggestionName('');
+    setSuggestionDetails('');
+    setSuggestionQuantity(1);
+    setEditingSuggestion(null);
+    setShowSuggestion(true);
+  }
+  function editSuggestion(index: number) {
+    const suggestion = suggestions[index];
+    setSuggestionName(suggestion.name);
+    setSuggestionDetails(suggestion.details);
+    setSuggestionQuantity(suggestion.quantity);
+    setEditingSuggestion(index);
+  }
+  function saveSuggestion() {
+    if (!suggestionName.trim()) return;
+    const suggestion = {
+      name: suggestionName.trim(),
+      details: suggestionDetails.trim(),
+      quantity: suggestionQuantity,
+    };
+    setSuggestions((current) =>
+      editingSuggestion === null
+        ? [...current, suggestion]
+        : current.map((item, index) =>
+            index === editingSuggestion ? suggestion : item,
+          ),
+    );
+    setSuggestionName('');
+    setSuggestionDetails('');
+    setSuggestionQuantity(1);
+    setEditingSuggestion(null);
+  }
   function finish() {
     if (!phone.trim() || !address.trim() || !date) {
       navigateStep('delivery');
@@ -380,15 +428,22 @@ export default function BookingFlow() {
             name: item.name,
             quantity: flavourQuantities[item.id],
           })),
+        suggestedFlavours: suggestions,
         delivery,
         customer: {
           name: 'Customer',
           phone: phone.trim(),
           date,
           location: address.trim(),
-          notes: flavourSuggestion.trim()
-            ? `Flavour suggestion: ${flavourSuggestion.trim()}${suggestionDetails.trim() ? ` (${suggestionDetails.trim()})` : ''}`
-            : '',
+          notes:
+            suggestions.length > 0
+              ? `Flavour suggestions: ${suggestions
+                  .map(
+                    (item) =>
+                      `${item.name} × ${item.quantity}${item.details ? ` (${item.details})` : ''}`,
+                  )
+                  .join('; ')}`
+              : '',
         },
         total,
       }),
@@ -496,20 +551,23 @@ export default function BookingFlow() {
               <button
                 type="button"
                 aria-expanded={showSuggestion}
-                onClick={() => setShowSuggestion((current) => !current)}
+                onClick={startNewSuggestion}
               >
                 <MessageSquarePlus />
                 <span>
                   <strong>
-                    {flavourSuggestion
-                      ? 'Suggestion saved'
+                    {suggestions.length > 0
+                      ? `${suggestions.length} suggestion${suggestions.length === 1 ? '' : 's'} saved`
                       : "Can't find your flavour?"}
                   </strong>
                   <small>
-                    {flavourSuggestion ||
-                      "Suggest one and we'll confirm availability."}
+                    {suggestions.length > 0
+                      ? suggestions
+                          .map((item) => `${item.name} × ${item.quantity}`)
+                          .join(', ')
+                      : "Suggest one and we'll confirm availability."}
                   </small>
-                  {flavourSuggestion && <em>Edit</em>}
+                  {suggestions.length > 0 && <em>Add or edit</em>}
                 </span>
               </button>
             </article>
@@ -560,6 +618,42 @@ export default function BookingFlow() {
               <MessageSquarePlus className="suggestion-icon" />
               <h2 id="suggestion-title">Suggest a flavour</h2>
               <p>Tell us what you want and we’ll confirm availability.</p>
+              {suggestions.length > 0 && (
+                <div className="suggestion-list">
+                  {suggestions.map((suggestion, index) => (
+                    <article key={`${suggestion.name}-${index}`}>
+                      <div>
+                        <strong>
+                          {suggestion.name} × {suggestion.quantity}
+                        </strong>
+                        {suggestion.details && (
+                          <small>{suggestion.details}</small>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        aria-label={`Edit ${suggestion.name}`}
+                        onClick={() => editSuggestion(index)}
+                      >
+                        <Pencil />
+                      </button>
+                      <button
+                        type="button"
+                        aria-label={`Remove ${suggestion.name}`}
+                        onClick={() =>
+                          setSuggestions((current) =>
+                            current.filter(
+                              (_, itemIndex) => itemIndex !== index,
+                            ),
+                          )
+                        }
+                      >
+                        <Trash2 />
+                      </button>
+                    </article>
+                  ))}
+                </div>
+              )}
               <label htmlFor="flavour-suggestion">
                 Flavour name
                 <input
@@ -567,8 +661,8 @@ export default function BookingFlow() {
                   autoFocus
                   maxLength={60}
                   placeholder="e.g. Mango mint"
-                  value={flavourSuggestion}
-                  onChange={(event) => setFlavourSuggestion(event.target.value)}
+                  value={suggestionName}
+                  onChange={(event) => setSuggestionName(event.target.value)}
                 />
               </label>
               <label htmlFor="suggestion-details">
@@ -581,13 +675,38 @@ export default function BookingFlow() {
                   onChange={(event) => setSuggestionDetails(event.target.value)}
                 />
               </label>
+              <div className="suggestion-quantity-row">
+                <span>Quantity</span>
+                <div>
+                  <button
+                    type="button"
+                    aria-label="Decrease suggested flavour quantity"
+                    onClick={() =>
+                      setSuggestionQuantity((value) => Math.max(1, value - 1))
+                    }
+                  >
+                    <Minus />
+                  </button>
+                  <strong>{suggestionQuantity}</strong>
+                  <button
+                    type="button"
+                    aria-label="Increase suggested flavour quantity"
+                    onClick={() => setSuggestionQuantity((value) => value + 1)}
+                  >
+                    <Plus />
+                  </button>
+                </div>
+              </div>
               <button
                 className="suggestion-save"
                 type="button"
-                disabled={!flavourSuggestion.trim()}
-                onClick={() => setShowSuggestion(false)}
+                disabled={!suggestionName.trim()}
+                onClick={saveSuggestion}
               >
-                <Check /> Save suggestion
+                <Check />{' '}
+                {editingSuggestion === null
+                  ? 'Add suggestion'
+                  : 'Update suggestion'}
               </button>
               <small>
                 Suggestions are not added to the price until confirmed.
