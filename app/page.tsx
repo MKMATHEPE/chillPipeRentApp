@@ -257,7 +257,6 @@ export default function BookingFlow() {
   const [address, setAddress] = useState('');
   const [date, setDate] = useState('');
   const [draftReady, setDraftReady] = useState(false);
-  const flavourLimit = pipeQty * 2;
   const total = useMemo(
     () => pipeQty * 550 + selected.length * 50,
     [pipeQty, selected],
@@ -321,9 +320,7 @@ export default function BookingFlow() {
     setSelected((current) =>
       current.includes(id)
         ? current.filter((item) => item !== id)
-        : current.length < flavourLimit
-          ? [...current, id]
-          : current,
+        : [...current, id],
     );
   }
   function finish() {
@@ -485,10 +482,7 @@ export default function BookingFlow() {
             </div>
           )}
           <div className="selected-head">
-            <strong>
-              Selected flavours ({selected.length}/{flavourLimit})
-            </strong>
-            {selected.length === flavourLimit && <span>Maximum selected</span>}
+            <strong>Selected flavours ({selected.length})</strong>
           </div>
           <div className="flavour-chips">
             {flavours
