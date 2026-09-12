@@ -282,7 +282,6 @@ export default function BookingFlow() {
   const [suggestions, setSuggestions] = useState<SuggestedFlavour[]>([]);
   const [suggestionName, setSuggestionName] = useState('');
   const [suggestionDetails, setSuggestionDetails] = useState('');
-  const [suggestionQuantity, setSuggestionQuantity] = useState(1);
   const [editingSuggestion, setEditingSuggestion] = useState<number | null>(
     null,
   );
@@ -383,7 +382,6 @@ export default function BookingFlow() {
   function startNewSuggestion() {
     setSuggestionName('');
     setSuggestionDetails('');
-    setSuggestionQuantity(1);
     setEditingSuggestion(null);
     setShowSuggestion(true);
   }
@@ -391,7 +389,6 @@ export default function BookingFlow() {
     const suggestion = suggestions[index];
     setSuggestionName(suggestion.name);
     setSuggestionDetails(suggestion.details);
-    setSuggestionQuantity(suggestion.quantity);
     setEditingSuggestion(index);
   }
   function changeSuggestionQuantity(index: number, change: number) {
@@ -408,7 +405,10 @@ export default function BookingFlow() {
     const suggestion = {
       name: suggestionName.trim(),
       details: suggestionDetails.trim(),
-      quantity: suggestionQuantity,
+      quantity:
+        editingSuggestion === null
+          ? 1
+          : suggestions[editingSuggestion]?.quantity || 1,
     };
     setSuggestions((current) =>
       editingSuggestion === null
@@ -419,7 +419,6 @@ export default function BookingFlow() {
     );
     setSuggestionName('');
     setSuggestionDetails('');
-    setSuggestionQuantity(1);
     setEditingSuggestion(null);
   }
   function finish() {
@@ -700,28 +699,6 @@ export default function BookingFlow() {
                   onChange={(event) => setSuggestionDetails(event.target.value)}
                 />
               </label>
-              <div className="suggestion-quantity-row">
-                <span>Quantity</span>
-                <div>
-                  <button
-                    type="button"
-                    aria-label="Decrease suggested flavour quantity"
-                    onClick={() =>
-                      setSuggestionQuantity((value) => Math.max(1, value - 1))
-                    }
-                  >
-                    <Minus />
-                  </button>
-                  <strong>{suggestionQuantity}</strong>
-                  <button
-                    type="button"
-                    aria-label="Increase suggested flavour quantity"
-                    onClick={() => setSuggestionQuantity((value) => value + 1)}
-                  >
-                    <Plus />
-                  </button>
-                </div>
-              </div>
               <button
                 className="suggestion-save"
                 type="button"
