@@ -28,7 +28,7 @@ type Order = {
   };
   total: number;
 };
-const prices: Record<string, number> = { pipe: 550, coal: 50, stove: 150 };
+const prices: Record<string, number> = { pipe: 550, coal: 75, stove: 200 };
 const names: Record<string, string> = {
   pipe: 'Hookah pipe',
   coal: 'Coal box (36 pieces)',

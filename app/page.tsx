@@ -5,6 +5,7 @@ import {
   ArrowRight,
   Check,
   Clock3,
+  Flame,
   Home,
   MapPin,
   Menu,
@@ -18,6 +19,7 @@ import {
   Truck,
   Trash2,
   X,
+  Zap,
 } from 'lucide-react';
 
 type Step = 'home' | 'flavours' | 'delivery';
@@ -293,6 +295,8 @@ function DeliveryOption({
 export default function BookingFlow() {
   const [step, setStep] = useState<Step>('home');
   const [pipeQty, setPipeQty] = useState(1);
+  const [coalQty, setCoalQty] = useState(0);
+  const [stoveQty, setStoveQty] = useState(0);
   const [flavourQuantities, setFlavourQuantities] = useState<
     Record<string, number>
   >({
@@ -327,10 +331,10 @@ export default function BookingFlow() {
     0,
   );
   const total = useMemo(
-    () => pipeQty * 550 + flavourUnits * 50,
-    [pipeQty, flavourUnits],
+    () => pipeQty * 550 + flavourUnits * 50 + coalQty * 75 + stoveQty * 200,
+    [pipeQty, flavourUnits, coalQty, stoveQty],
   );
-  const cart = pipeQty + flavourUnits;
+  const cart = pipeQty + flavourUnits + coalQty + stoveQty;
   const collectionDay = date.split('T')[0] || '';
   const collectionTime = date.split('T')[1] || '';
   useEffect(() => {
@@ -341,6 +345,8 @@ export default function BookingFlow() {
       try {
         const draft = JSON.parse(raw);
         setPipeQty(draft.pipeQty || 1);
+        setCoalQty(Math.max(0, Number(draft.coalQty) || 0));
+        setStoveQty(Math.max(0, Number(draft.stoveQty) || 0));
         if (
           draft.flavourQuantities &&
           typeof draft.flavourQuantities === 'object'
@@ -387,6 +393,8 @@ export default function BookingFlow() {
         'chill-pipe-draft',
         JSON.stringify({
           pipeQty,
+          coalQty,
+          stoveQty,
           flavourQuantities,
           delivery,
           phone,
@@ -402,6 +410,8 @@ export default function BookingFlow() {
   }, [
     draftReady,
     pipeQty,
+    coalQty,
+    stoveQty,
     flavourQuantities,
     delivery,
     phone,
@@ -509,7 +519,7 @@ export default function BookingFlow() {
     localStorage.setItem(
       'chill-pipe-order',
       JSON.stringify({
-        quantities: { pipe: pipeQty, coal: 0, stove: 0 },
+        quantities: { pipe: pipeQty, coal: coalQty, stove: stoveQty },
         selectedFlavours: flavours
           .filter((item) => (flavourQuantities[item.id] || 0) > 0)
           .map((item) => ({
@@ -659,6 +669,32 @@ export default function BookingFlow() {
             <i />
             <i />
           </div>
+          <section className="setup-addons" aria-label="Session add-ons">
+            <div className="setup-addons-title">
+              <strong>Add-ons</strong>
+              <span>Complete your setup</span>
+            </div>
+            <div className="setup-addon-row">
+              <i>
+                <Flame />
+              </i>
+              <span>
+                <strong>Coal box</strong>
+                <small>36 pieces · R75</small>
+              </span>
+              <Quantity value={coalQty} onChange={setCoalQty} />
+            </div>
+            <div className="setup-addon-row">
+              <i>
+                <Zap />
+              </i>
+              <span>
+                <strong>Coal stove</strong>
+                <small>R200</small>
+              </span>
+              <Quantity value={stoveQty} onChange={setStoveQty} />
+            </div>
+          </section>
           <PrimaryButton onClick={() => navigateStep('flavours')}>
             Choose flavours
           </PrimaryButton>

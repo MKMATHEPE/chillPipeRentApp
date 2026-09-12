@@ -242,6 +242,65 @@
   border-radius: 4px;
   background: #111;
 }
+.setup-addons {
+  margin: 0 0 16px;
+  overflow: hidden;
+  border: 1px solid #d9d7d2;
+  border-radius: 18px;
+  background: #fff;
+}
+.setup-addons-title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 11px 13px 7px;
+}
+.setup-addons-title strong {
+  font-size: 13px;
+}
+.setup-addons-title span {
+  color: #777;
+  font-size: 10px;
+}
+.setup-addon-row {
+  display: grid;
+  grid-template-columns: 34px 1fr auto;
+  align-items: center;
+  gap: 9px;
+  min-height: 52px;
+  padding: 7px 10px;
+  border-top: 1px solid #eceae6;
+}
+.setup-addon-row > i {
+  display: grid;
+  width: 31px;
+  height: 31px;
+  place-items: center;
+  border-radius: 50%;
+  background: #efeeeb;
+}
+.setup-addon-row > i svg {
+  width: 15px;
+}
+.setup-addon-row > span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.setup-addon-row > span strong {
+  font-size: 12px;
+}
+.setup-addon-row > span small {
+  color: #777;
+  font-size: 10px;
+}
+.setup-addon-row .flow-quantity button {
+  width: 32px;
+  height: 32px;
+}
+.setup-addon-row .flow-quantity span {
+  width: 22px;
+}
 .flow-primary {
   width: 100%;
   height: 56px;
