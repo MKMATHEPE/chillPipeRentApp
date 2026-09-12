@@ -462,7 +462,7 @@
 .delivery-sheet {
   min-height: 630px;
   padding-top: 22px;
-  padding-bottom: 118px;
+  padding-bottom: 92px;
 }
 .delivery-options {
   display: grid;
@@ -573,7 +573,33 @@
   gap: 14px;
 }
 .collection-schedule .booking-row {
+  min-height: 52px;
   grid-template-columns: 28px 1fr;
+}
+.booking-input-action {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center;
+  min-width: 0;
+}
+.booking-input-action input {
+  min-width: 0;
+  flex: 1;
+}
+.booking-input-action button {
+  display: grid;
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: #111;
+  color: #fff;
+}
+.booking-input-action button svg {
+  width: 14px;
 }
 .use-location {
   display: flex;
@@ -598,6 +624,10 @@
   color: #666;
   font-size: 10px;
 }
+.location-status.error {
+  margin-left: 34px;
+  color: #8a2d24;
+}
 .delivery-address-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -614,6 +644,44 @@
 }
 .delivery-return {
   margin-top: 14px;
+}
+.delivery-details-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 42px;
+  margin-top: 10px;
+  padding: 0 12px;
+  border: 1px solid #d4d2ce;
+  border-radius: 12px;
+  background: #fff;
+  color: #111;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 700;
+}
+.delivery-details-toggle i {
+  font-size: 16px;
+  font-style: normal;
+}
+.delivery-details-panel {
+  margin-top: 6px;
+  padding: 4px 12px 12px;
+  border: 1px solid #ddd;
+  border-radius: 14px;
+  background: #fff;
+}
+.delivery-details-done {
+  width: 100%;
+  min-height: 36px;
+  margin-top: 10px;
+  border: 0;
+  border-radius: 18px;
+  background: #111;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
 }
 .delivery-return > strong {
   display: block;
