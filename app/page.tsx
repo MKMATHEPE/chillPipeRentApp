@@ -74,6 +74,15 @@ const flavours: Flavour[] = [
   },
 ];
 const money = (n: number) => `R${n.toLocaleString('en-ZA')}`;
+const COLLECTION_LOCATION = 'Vorna Valley';
+const collectionTimeSlots = Array.from({ length: 18 }, (_, index) => {
+  const totalMinutes = 10 * 60 + index * 30;
+  const hours = Math.floor(totalMinutes / 60)
+    .toString()
+    .padStart(2, '0');
+  const minutes = (totalMinutes % 60).toString().padStart(2, '0');
+  return `${hours}:${minutes}`;
+});
 
 function BrandLogo() {
   return (
@@ -288,6 +297,7 @@ export default function BookingFlow() {
   const [delivery, setDelivery] = useState(true);
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
+  const [deliveryAddress, setDeliveryAddress] = useState('');
   const [date, setDate] = useState('');
   const [draftReady, setDraftReady] = useState(false);
   const flavourUnits = Object.values(flavourQuantities).reduce(
@@ -317,9 +327,11 @@ export default function BookingFlow() {
             Object.fromEntries(draft.selected.map((id: string) => [id, 1])),
           );
         }
-        setDelivery(draft.delivery !== false);
+        const isDelivery = draft.delivery !== false;
+        setDelivery(isDelivery);
         setPhone(draft.phone || '');
-        setAddress(draft.address || '');
+        setAddress(isDelivery ? draft.address || '' : COLLECTION_LOCATION);
+        if (isDelivery) setDeliveryAddress(draft.address || '');
         setDate(draft.date || '');
         if (Array.isArray(draft.suggestions)) {
           setSuggestions(draft.suggestions);
@@ -422,7 +434,10 @@ export default function BookingFlow() {
     setEditingSuggestion(null);
   }
   function finish() {
-    if (!phone.trim() || !address.trim() || !date) {
+    const validCollectionTime =
+      delivery ||
+      (date.includes('T') && collectionTimeSlots.includes(date.split('T')[1]));
+    if (!phone.trim() || !address.trim() || !date || !validCollectionTime) {
       navigateStep('delivery');
       return;
     }
@@ -748,14 +763,21 @@ export default function BookingFlow() {
             icon={Truck}
             title="Delivery"
             copy="We bring the vibes to you."
-            onClick={() => setDelivery(true)}
+            onClick={() => {
+              setDelivery(true);
+              setAddress(deliveryAddress);
+            }}
           />
           <DeliveryOption
             selected={!delivery}
             icon={Store}
             title="Collection"
             copy="Pick up and get smoking."
-            onClick={() => setDelivery(false)}
+            onClick={() => {
+              if (delivery) setDeliveryAddress(address);
+              setDelivery(false);
+              setAddress(COLLECTION_LOCATION);
+            }}
           />
         </div>
         <label className="booking-row">
@@ -774,31 +796,74 @@ export default function BookingFlow() {
         <label className="booking-row">
           <MapPin />
           <span>
-            {delivery ? 'Delivery address' : 'Area / suburb'}
+            {delivery ? 'Delivery address' : 'Collection location'}
             <input
               required
               value={address}
-              onChange={(e) => setAddress(e.target.value)}
+              readOnly={!delivery}
+              onChange={(e) => {
+                setAddress(e.target.value);
+                setDeliveryAddress(e.target.value);
+              }}
               placeholder={
-                delivery
-                  ? 'Enter delivery address'
-                  : 'Enter your area or suburb'
+                delivery ? 'Enter delivery address' : COLLECTION_LOCATION
               }
             />
           </span>
         </label>
-        <label className="booking-row">
-          <Clock3 />
-          <span>
-            Select date & time
-            <input
-              required
-              type="datetime-local"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-            />
-          </span>
-        </label>
+        {delivery ? (
+          <label className="booking-row">
+            <Clock3 />
+            <span>
+              Select date & time
+              <input
+                required
+                type="datetime-local"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+              />
+            </span>
+          </label>
+        ) : (
+          <div className="collection-schedule">
+            <label className="booking-row">
+              <Clock3 />
+              <span>
+                Collection date
+                <input
+                  required
+                  type="date"
+                  value={date.split('T')[0] || ''}
+                  onChange={(e) => {
+                    const time = date.split('T')[1] || '';
+                    setDate(time ? `${e.target.value}T${time}` : e.target.value);
+                  }}
+                />
+              </span>
+            </label>
+            <label className="booking-row">
+              <Clock3 />
+              <span>
+                Collection time
+                <select
+                  required
+                  value={date.split('T')[1] || ''}
+                  onChange={(e) => {
+                    const day = date.split('T')[0] || '';
+                    setDate(day ? `${day}T${e.target.value}` : '');
+                  }}
+                >
+                  <option value="">Select a time</option>
+                  {collectionTimeSlots.map((time) => (
+                    <option key={time} value={time}>
+                      {time}
+                    </option>
+                  ))}
+                </select>
+              </span>
+            </label>
+          </div>
+        )}
         <PrimaryButton onClick={finish}>Continue</PrimaryButton>
         <small className="relax-copy">Relax. We handle the rest.</small>
       </section>
