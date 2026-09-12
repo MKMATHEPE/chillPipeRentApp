@@ -17,6 +17,8 @@ type Order = {
   selectedFlavours: FlavourItem[];
   suggestedFlavours?: SuggestedFlavour[];
   delivery: boolean;
+  deliveryFee?: number;
+  deliveryDistanceKm?: number;
   customer: {
     name: string;
     phone: string;
@@ -89,15 +91,15 @@ export default function Checkout() {
         : [],
     [order],
   );
-  const flavourItems = order.selectedFlavours.map((item) =>
+  const flavourItems = (order?.selectedFlavours || []).map((item) =>
     typeof item === 'string' ? { name: item, quantity: 1 } : item,
   );
   const flavourUnits = flavourItems.reduce(
     (sum, item) => sum + item.quantity,
     0,
   );
-  const suggestedFlavours = order.suggestedFlavours || [];
-  const standardDeliveryFee = order.delivery ? 350 : 0;
+  const suggestedFlavours = order?.suggestedFlavours || [];
+  const deliveryFee = order?.delivery ? order.deliveryFee ?? 350 : 0;
   if (!order)
     return (
       <main className="empty-cart">
@@ -200,12 +202,12 @@ export default function Checkout() {
               {order.delivery ? 'Delivery & collection' : 'Customer collection'}
             </span>
             <strong>
-              {order.delivery ? money(standardDeliveryFee) : 'Included'}
+              {order.delivery ? money(deliveryFee) : 'Included'}
             </strong>
           </div>
-          {order.delivery ? (
+          {order.delivery && order.deliveryDistanceKm ? (
             <p className="checkout-flavour-list">
-              Reduced to R250 when the confirmed address is within 15 km.
+              {order.deliveryDistanceKm} km driving from Vorna Valley.
             </p>
           ) : null}
           <div className="checkout-total">
@@ -214,7 +216,7 @@ export default function Checkout() {
               {money(
                 order.total +
                   (order.quantities.pipe || 0) * 308 +
-                  standardDeliveryFee,
+                  deliveryFee,
               )}
             </strong>
           </div>
@@ -243,7 +245,7 @@ export default function Checkout() {
               </strong>
               <p>
                 {order.delivery
-                  ? 'R350 standard fee. R250 when the confirmed address is within 15 km.'
+                  ? `${order.deliveryDistanceKm || '—'} km driving · ${money(deliveryFee)} delivery & collection.`
                   : 'Collection and return details will be confirmed with you.'}
               </p>
             </div>

@@ -25,11 +25,14 @@ export async function POST(request: Request) {
     if (!pipeQty) return json({ error: 'Add at least one hookah pipe.' }, 400);
     const reference = `CP-${crypto.randomUUID().slice(0, 6).toUpperCase()}`;
     const total = Math.max(0, Math.round(Number(body.total) || 0));
+    const deliveryFee = body.delivery ? Number(body.deliveryFee) : 0;
+    if (body.delivery && deliveryFee !== 250 && deliveryFee !== 350)
+      return json({ error: 'Calculate the delivery fee before checkout.' }, 400);
     const deposit = pipeQty * 308;
     const now = Date.now();
     await getDb()
       .prepare(
-        `INSERT INTO bookings (reference,customer_name,phone,rental_date,location,notes,order_json,rental_total,deposit,delivery_fee,status,payment_method,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,NULL,'awaiting_review',NULL,?,?)`,
+        `INSERT INTO bookings (reference,customer_name,phone,rental_date,location,notes,order_json,rental_total,deposit,delivery_fee,status,payment_method,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,'awaiting_review',NULL,?,?)`,
       )
       .bind(
         reference,
@@ -43,9 +46,11 @@ export async function POST(request: Request) {
           selectedFlavours: body.selectedFlavours || [],
           suggestedFlavours: body.suggestedFlavours || [],
           delivery: Boolean(body.delivery),
+          deliveryDistanceKm: Number(body.deliveryDistanceKm) || 0,
         }),
         total,
         deposit,
+        deliveryFee,
         now,
         now,
       )
@@ -56,7 +61,7 @@ export async function POST(request: Request) {
         status: 'awaiting_review',
         total,
         deposit,
-        deliveryFee: null,
+        deliveryFee,
         customer: { name, phone, date, location },
       },
       201,

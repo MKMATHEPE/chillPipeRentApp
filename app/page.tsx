@@ -23,6 +23,12 @@ import {
 type Step = 'home' | 'flavours' | 'delivery';
 type Flavour = { id: string; name: string; description: string; image: string };
 type SuggestedFlavour = { name: string; details: string; quantity: number };
+type DeliveryQuote = {
+  status: 'idle' | 'loading' | 'ready' | 'error';
+  distanceKm?: number;
+  fee?: 250 | 350;
+  message?: string;
+};
 const flavours: Flavour[] = [
   {
     id: 'lady',
@@ -309,6 +315,9 @@ export default function BookingFlow() {
   const [deliveryInstructions, setDeliveryInstructions] = useState('');
   const [locationStatus, setLocationStatus] = useState('');
   const [locationPinned, setLocationPinned] = useState(false);
+  const [deliveryQuote, setDeliveryQuote] = useState<DeliveryQuote>({
+    status: 'idle',
+  });
   const [showDeliveryDetails, setShowDeliveryDetails] = useState(false);
   const [date, setDate] = useState('');
   const [draftReady, setDraftReady] = useState(false);
@@ -349,6 +358,8 @@ export default function BookingFlow() {
         setSuburb(draft.suburb || '');
         setUnit(draft.unit || '');
         setDeliveryInstructions(draft.deliveryInstructions || '');
+        if (draft.deliveryQuote?.status === 'ready')
+          setDeliveryQuote(draft.deliveryQuote);
         setDate(draft.date || '');
         if (Array.isArray(draft.suggestions)) {
           setSuggestions(draft.suggestions);
@@ -382,6 +393,7 @@ export default function BookingFlow() {
           suburb,
           unit,
           deliveryInstructions,
+          deliveryQuote,
           date,
           suggestions,
         }),
@@ -396,6 +408,7 @@ export default function BookingFlow() {
     suburb,
     unit,
     deliveryInstructions,
+    deliveryQuote,
     date,
     suggestions,
   ]);
@@ -466,6 +479,7 @@ export default function BookingFlow() {
       !phone.trim() ||
       !address.trim() ||
       (delivery && !suburb.trim()) ||
+      (delivery && deliveryQuote.status !== 'ready') ||
       !validTime
     ) {
       navigateStep('delivery');
@@ -483,6 +497,8 @@ export default function BookingFlow() {
           })),
         suggestedFlavours: suggestions,
         delivery,
+        deliveryFee: delivery ? deliveryQuote.fee : 0,
+        deliveryDistanceKm: delivery ? deliveryQuote.distanceKm : 0,
         customer: {
           name: 'Customer',
           phone: phone.trim(),
@@ -512,6 +528,50 @@ export default function BookingFlow() {
       }),
     );
     window.location.href = '/checkout';
+  }
+  async function calculateDeliveryQuote(payload: {
+    address?: string;
+    latitude?: number;
+    longitude?: number;
+  }) {
+    setDeliveryQuote({ status: 'loading' });
+    setLocationStatus('');
+    try {
+      const response = await fetch('/api/delivery-quote', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const quote = (await response.json()) as {
+        error?: string;
+        distanceKm?: number;
+        fee?: 250 | 350;
+        destinationLabel?: string;
+        destinationSuburb?: string;
+      };
+      if (!response.ok)
+        throw new Error(quote.error || 'Could not calculate delivery distance.');
+      setDeliveryQuote({
+        status: 'ready',
+        distanceKm: quote.distanceKm || 0,
+        fee: quote.fee || 350,
+      });
+      if (payload.latitude !== undefined && quote.destinationLabel) {
+        setAddress(quote.destinationLabel);
+        setDeliveryAddress(quote.destinationLabel);
+        setSuburb(quote.destinationSuburb || 'Pinned location');
+        setLocationPinned(true);
+      }
+      return true;
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Could not calculate delivery distance.';
+      setDeliveryQuote({ status: 'error', message });
+      setLocationStatus(message);
+      return false;
+    }
   }
   if (step === 'home')
     return (
@@ -806,6 +866,7 @@ export default function BookingFlow() {
             onClick={() => {
               setDelivery(true);
               setAddress(deliveryAddress);
+              setDeliveryQuote({ status: 'idle' });
             }}
           />
           <DeliveryOption
@@ -867,6 +928,7 @@ export default function BookingFlow() {
                           setAddress(e.target.value);
                           setDeliveryAddress(e.target.value);
                           setLocationPinned(false);
+                          setDeliveryQuote({ status: 'idle' });
                         }}
                         placeholder="Street name and number"
                       />
@@ -883,12 +945,11 @@ export default function BookingFlow() {
                           }
                           setLocationStatus('');
                           navigator.geolocation.getCurrentPosition(
-                            ({ coords }) => {
-                              const pinned = `${coords.latitude.toFixed(6)}, ${coords.longitude.toFixed(6)}`;
-                              setAddress(pinned);
-                              setDeliveryAddress(pinned);
-                              setLocationPinned(true);
-                            },
+                            ({ coords }) =>
+                              void calculateDeliveryQuote({
+                                latitude: coords.latitude,
+                                longitude: coords.longitude,
+                              }),
                             () =>
                               setLocationStatus(
                                 'Location access was not granted.',
@@ -913,7 +974,11 @@ export default function BookingFlow() {
                     <input
                       required
                       value={suburb}
-                      onChange={(e) => setSuburb(e.target.value)}
+                      onChange={(e) => {
+                        setSuburb(e.target.value);
+                        setLocationPinned(false);
+                        setDeliveryQuote({ status: 'idle' });
+                      }}
                       placeholder="e.g. Midrand"
                     />
                   </span>
@@ -942,6 +1007,26 @@ export default function BookingFlow() {
                     />
                   </span>
                 </label>
+                <button
+                  className="delivery-quote-button"
+                  type="button"
+                  disabled={
+                    deliveryQuote.status === 'loading' ||
+                    !address.trim() ||
+                    !suburb.trim()
+                  }
+                  onClick={() =>
+                    void calculateDeliveryQuote({
+                      address: `${address}, ${suburb}, South Africa`,
+                    })
+                  }
+                >
+                  {deliveryQuote.status === 'loading'
+                    ? 'Calculating driving distance…'
+                    : deliveryQuote.status === 'ready'
+                      ? 'Recalculate delivery fee'
+                      : 'Calculate delivery fee'}
+                </button>
                 <button
                   className="delivery-details-done"
                   type="button"
@@ -997,7 +1082,16 @@ export default function BookingFlow() {
               </label>
             </div>
             <p className="delivery-fee-note">
-              R350 delivery & collection · R250 within 15 km
+              {deliveryQuote.status === 'ready'
+                ? `${deliveryQuote.distanceKm} km driving · ${money(deliveryQuote.fee || 350)} delivery & collection`
+                : 'R250 within 15 km · R350 beyond 15 km'}
+              <a
+                href="https://www.openstreetmap.org/copyright"
+                target="_blank"
+                rel="noreferrer"
+              >
+                Distance powered by OpenStreetMap
+              </a>
             </p>
           </>
         ) : (
