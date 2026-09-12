@@ -191,26 +191,45 @@ function Quantity({
 }
 function FlavourCard({
   flavour,
-  selected,
-  onToggle,
+  quantity,
+  onIncrease,
+  onDecrease,
 }: {
   flavour: Flavour;
-  selected: boolean;
-  onToggle: () => void;
+  quantity: number;
+  onIncrease: () => void;
+  onDecrease: () => void;
 }) {
   return (
-    <article className={selected ? 'flow-flavour selected' : 'flow-flavour'}>
+    <article
+      className={quantity > 0 ? 'flow-flavour selected' : 'flow-flavour'}
+    >
       <img src={flavour.image} alt="" loading="lazy" decoding="async" />
       <div>
         <h3>{flavour.name}</h3>
         <p>{flavour.description}</p>
       </div>
-      <button
-        aria-label={selected ? `Remove ${flavour.name}` : `Add ${flavour.name}`}
-        onClick={onToggle}
-      >
-        {selected ? <Check /> : <Plus />}
-      </button>
+      {quantity > 0 ? (
+        <span className="flavour-card-quantity">
+          <button
+            aria-label={`Remove one ${flavour.name}`}
+            onClick={onDecrease}
+          >
+            <Minus />
+          </button>
+          <b>{quantity}</b>
+          <button
+            aria-label={`Add another ${flavour.name}`}
+            onClick={onIncrease}
+          >
+            <Plus />
+          </button>
+        </span>
+      ) : (
+        <button aria-label={`Add ${flavour.name}`} onClick={onIncrease}>
+          <Plus />
+        </button>
+      )}
     </article>
   );
 }
@@ -249,7 +268,12 @@ function DeliveryOption({
 export default function BookingFlow() {
   const [step, setStep] = useState<Step>('home');
   const [pipeQty, setPipeQty] = useState(1);
-  const [selected, setSelected] = useState<string[]>(['lady', 'gum']);
+  const [flavourQuantities, setFlavourQuantities] = useState<
+    Record<string, number>
+  >({
+    lady: 1,
+    gum: 1,
+  });
   const [showSuggestion, setShowSuggestion] = useState(false);
   const [flavourSuggestion, setFlavourSuggestion] = useState('');
   const [delivery, setDelivery] = useState(true);
@@ -257,11 +281,15 @@ export default function BookingFlow() {
   const [address, setAddress] = useState('');
   const [date, setDate] = useState('');
   const [draftReady, setDraftReady] = useState(false);
-  const total = useMemo(
-    () => pipeQty * 550 + selected.length * 50,
-    [pipeQty, selected],
+  const flavourUnits = Object.values(flavourQuantities).reduce(
+    (sum, quantity) => sum + quantity,
+    0,
   );
-  const cart = pipeQty + selected.length;
+  const total = useMemo(
+    () => pipeQty * 550 + flavourUnits * 50,
+    [pipeQty, flavourUnits],
+  );
+  const cart = pipeQty + flavourUnits;
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const requested = params.get('step');
@@ -270,9 +298,16 @@ export default function BookingFlow() {
       try {
         const draft = JSON.parse(raw);
         setPipeQty(draft.pipeQty || 1);
-        setSelected(
-          Array.isArray(draft.selected) ? draft.selected : ['lady', 'gum'],
-        );
+        if (
+          draft.flavourQuantities &&
+          typeof draft.flavourQuantities === 'object'
+        ) {
+          setFlavourQuantities(draft.flavourQuantities);
+        } else if (Array.isArray(draft.selected)) {
+          setFlavourQuantities(
+            Object.fromEntries(draft.selected.map((id: string) => [id, 1])),
+          );
+        }
         setDelivery(draft.delivery !== false);
         setPhone(draft.phone || '');
         setAddress(draft.address || '');
@@ -292,7 +327,7 @@ export default function BookingFlow() {
         'chill-pipe-draft',
         JSON.stringify({
           pipeQty,
-          selected,
+          flavourQuantities,
           delivery,
           phone,
           address,
@@ -303,7 +338,7 @@ export default function BookingFlow() {
   }, [
     draftReady,
     pipeQty,
-    selected,
+    flavourQuantities,
     delivery,
     phone,
     address,
@@ -316,12 +351,14 @@ export default function BookingFlow() {
     window.history.replaceState({}, '', url);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
-  function toggleFlavour(id: string) {
-    setSelected((current) =>
-      current.includes(id)
-        ? current.filter((item) => item !== id)
-        : [...current, id],
-    );
+  function changeFlavourQuantity(id: string, change: number) {
+    setFlavourQuantities((current) => {
+      const nextQuantity = Math.max(0, (current[id] || 0) + change);
+      const next = { ...current };
+      if (nextQuantity === 0) delete next[id];
+      else next[id] = nextQuantity;
+      return next;
+    });
   }
   function finish() {
     if (!phone.trim() || !address.trim() || !date) {
@@ -333,8 +370,11 @@ export default function BookingFlow() {
       JSON.stringify({
         quantities: { pipe: pipeQty, coal: 0, stove: 0 },
         selectedFlavours: flavours
-          .filter((item) => selected.includes(item.id))
-          .map((item) => item.name),
+          .filter((item) => (flavourQuantities[item.id] || 0) > 0)
+          .map((item) => ({
+            name: item.name,
+            quantity: flavourQuantities[item.id],
+          })),
         delivery,
         customer: {
           name: 'Customer',
@@ -442,8 +482,9 @@ export default function BookingFlow() {
               <FlavourCard
                 key={flavour.id}
                 flavour={flavour}
-                selected={selected.includes(flavour.id)}
-                onToggle={() => toggleFlavour(flavour.id)}
+                quantity={flavourQuantities[flavour.id] || 0}
+                onIncrease={() => changeFlavourQuantity(flavour.id, 1)}
+                onDecrease={() => changeFlavourQuantity(flavour.id, -1)}
               />
             ))}
             <article className="flow-flavour suggestion-flavour-card">
@@ -482,14 +523,18 @@ export default function BookingFlow() {
             </div>
           )}
           <div className="selected-head">
-            <strong>Selected flavours ({selected.length})</strong>
+            <strong>Selected flavour units ({flavourUnits})</strong>
           </div>
           <div className="flavour-chips">
             {flavours
-              .filter((item) => selected.includes(item.id))
+              .filter((item) => (flavourQuantities[item.id] || 0) > 0)
               .map((item) => (
-                <button key={item.id} onClick={() => toggleFlavour(item.id)}>
-                  {item.name}
+                <button
+                  key={item.id}
+                  onClick={() => changeFlavourQuantity(item.id, -1)}
+                  aria-label={`Remove one ${item.name}`}
+                >
+                  {item.name} × {flavourQuantities[item.id]}
                   <span>×</span>
                 </button>
               ))}
