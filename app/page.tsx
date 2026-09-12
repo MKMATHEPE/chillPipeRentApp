@@ -89,16 +89,6 @@ const localDateValue = (value = new Date()) => {
   const offset = value.getTimezoneOffset() * 60_000;
   return new Date(value.getTime() - offset).toISOString().slice(0, 10);
 };
-const collectionReturn = (value: string) => {
-  if (!value.includes('T')) return '';
-  const returnAt = new Date(value);
-  if (Number.isNaN(returnAt.getTime())) return '';
-  returnAt.setHours(returnAt.getHours() + 24);
-  return returnAt.toLocaleString('en-ZA', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  });
-};
 
 function BrandLogo() {
   return (
@@ -327,7 +317,6 @@ export default function BookingFlow() {
   const cart = pipeQty + flavourUnits;
   const collectionDay = date.split('T')[0] || '';
   const collectionTime = date.split('T')[1] || '';
-  const returnDue = !delivery ? collectionReturn(date) : '';
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const requested = params.get('step');
@@ -909,26 +898,6 @@ export default function BookingFlow() {
                 <strong>Collection details</strong>
                 <span>
                   Available slots are confirmed when your booking is approved.
-                </span>
-              </div>
-              {returnDue && (
-                <div>
-                  <strong>Return by</strong>
-                  <span>{returnDue} · 24-hour rental</span>
-                </div>
-              )}
-              <div>
-                <strong>Running late?</strong>
-                <span>
-                  R25 is charged for every 30 minutes after your collection time.
-                </span>
-              </div>
-              <div>
-                <strong>Missed collection</strong>
-                <span>
-                  The booking is cancelled after 12 hours or at 23:59 that day,
-                  whichever comes first. Your deposit is refunded in full and 35%
-                  of the rental payment is refunded.
                 </span>
               </div>
               <a
