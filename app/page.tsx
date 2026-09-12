@@ -304,6 +304,13 @@ export default function BookingFlow() {
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
   const [deliveryAddress, setDeliveryAddress] = useState('');
+  const [suburb, setSuburb] = useState('');
+  const [unit, setUnit] = useState('');
+  const [deliveryInstructions, setDeliveryInstructions] = useState('');
+  const [returnMethod, setReturnMethod] = useState<'self' | 'collection'>(
+    'self',
+  );
+  const [locationStatus, setLocationStatus] = useState('');
   const [date, setDate] = useState('');
   const [draftReady, setDraftReady] = useState(false);
   const flavourUnits = Object.values(flavourQuantities).reduce(
@@ -340,6 +347,12 @@ export default function BookingFlow() {
         setPhone(draft.phone || '');
         setAddress(isDelivery ? draft.address || '' : COLLECTION_LOCATION);
         if (isDelivery) setDeliveryAddress(draft.address || '');
+        setSuburb(draft.suburb || '');
+        setUnit(draft.unit || '');
+        setDeliveryInstructions(draft.deliveryInstructions || '');
+        setReturnMethod(
+          draft.returnMethod === 'collection' ? 'collection' : 'self',
+        );
         setDate(draft.date || '');
         if (Array.isArray(draft.suggestions)) {
           setSuggestions(draft.suggestions);
@@ -370,6 +383,10 @@ export default function BookingFlow() {
           delivery,
           phone,
           address,
+          suburb,
+          unit,
+          deliveryInstructions,
+          returnMethod,
           date,
           suggestions,
         }),
@@ -381,6 +398,10 @@ export default function BookingFlow() {
     delivery,
     phone,
     address,
+    suburb,
+    unit,
+    deliveryInstructions,
+    returnMethod,
     date,
     suggestions,
   ]);
@@ -442,13 +463,17 @@ export default function BookingFlow() {
     setEditingSuggestion(null);
   }
   function finish() {
-    const collectionDate = new Date(date);
-    const validCollectionTime =
-      delivery ||
-      (date.includes('T') &&
-        collectionTimeSlots.includes(date.split('T')[1]) &&
-        collectionDate.getTime() > Date.now());
-    if (!phone.trim() || !address.trim() || !date || !validCollectionTime) {
+    const bookingDate = new Date(date);
+    const validTime =
+      date.includes('T') &&
+      collectionTimeSlots.includes(date.split('T')[1]) &&
+      bookingDate.getTime() > Date.now();
+    if (
+      !phone.trim() ||
+      !address.trim() ||
+      (delivery && !suburb.trim()) ||
+      !validTime
+    ) {
       navigateStep('delivery');
       return;
     }
@@ -468,8 +493,12 @@ export default function BookingFlow() {
           name: 'Customer',
           phone: phone.trim(),
           date,
-          location: address.trim(),
-          notes:
+          location: delivery
+            ? [address.trim(), unit.trim(), suburb.trim()]
+                .filter(Boolean)
+                .join(', ')
+            : COLLECTION_LOCATION,
+          notes: [
             suggestions.length > 0
               ? `Flavour suggestions: ${suggestions
                   .map(
@@ -478,6 +507,19 @@ export default function BookingFlow() {
                   )
                   .join('; ')}`
               : '',
+            delivery && deliveryInstructions.trim()
+              ? `Delivery instructions: ${deliveryInstructions.trim()}`
+              : '',
+            delivery
+              ? `Return method: ${
+                  returnMethod === 'self'
+                    ? 'Customer return to Vorna Valley'
+                    : 'Paid equipment collection requested'
+                }`
+              : '',
+          ]
+            .filter(Boolean)
+            .join(' | '),
         },
         total,
       }),
@@ -827,18 +869,135 @@ export default function BookingFlow() {
           </span>
         </label>
         {delivery ? (
-          <label className="booking-row">
-            <Clock3 />
-            <span>
-              Select date & time
-              <input
-                required
-                type="datetime-local"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-              />
-            </span>
-          </label>
+          <>
+            <button
+              className="use-location"
+              type="button"
+              onClick={() => {
+                if (!navigator.geolocation) {
+                  setLocationStatus('Location is not available on this device.');
+                  return;
+                }
+                setLocationStatus('Finding your location…');
+                navigator.geolocation.getCurrentPosition(
+                  ({ coords }) => {
+                    const pinned = `${coords.latitude.toFixed(6)}, ${coords.longitude.toFixed(6)}`;
+                    setAddress(pinned);
+                    setDeliveryAddress(pinned);
+                    setLocationStatus('Location added. Please confirm your suburb.');
+                  },
+                  () => setLocationStatus('Location access was not granted.'),
+                );
+              }}
+            >
+              <MapPin /> Use my location
+            </button>
+            {locationStatus && <small className="location-status">{locationStatus}</small>}
+            <div className="delivery-address-grid">
+              <label className="booking-row">
+                <MapPin />
+                <span>
+                  Area / suburb
+                  <input
+                    required
+                    value={suburb}
+                    onChange={(e) => setSuburb(e.target.value)}
+                    placeholder="e.g. Midrand"
+                  />
+                </span>
+              </label>
+              <label className="booking-row">
+                <Home />
+                <span>
+                  Building / unit <i>Optional</i>
+                  <input
+                    value={unit}
+                    onChange={(e) => setUnit(e.target.value)}
+                    placeholder="Complex, unit or floor"
+                  />
+                </span>
+              </label>
+            </div>
+            <div className="collection-schedule">
+              <label className="booking-row">
+                <Clock3 />
+                <span>
+                  Delivery date
+                  <input
+                    required
+                    min={localDateValue()}
+                    type="date"
+                    value={collectionDay}
+                    onChange={(e) => setDate(e.target.value)}
+                  />
+                </span>
+              </label>
+              <label className="booking-row">
+                <Clock3 />
+                <span>
+                  Delivery time
+                  <select
+                    required
+                    value={collectionTime}
+                    onChange={(e) =>
+                      setDate(
+                        collectionDay
+                          ? `${collectionDay}T${e.target.value}`
+                          : '',
+                      )
+                    }
+                  >
+                    <option value="">Select a time</option>
+                    {collectionTimeSlots.map((time) => {
+                      const elapsed =
+                        !collectionDay ||
+                        new Date(`${collectionDay}T${time}`).getTime() <=
+                          Date.now();
+                      return (
+                        <option key={time} value={time} disabled={elapsed}>
+                          {time}
+                        </option>
+                      );
+                    })}
+                  </select>
+                </span>
+              </label>
+            </div>
+            <label className="booking-row delivery-notes-row">
+              <MessageCircle />
+              <span>
+                Delivery instructions <i>Optional</i>
+                <input
+                  value={deliveryInstructions}
+                  onChange={(e) => setDeliveryInstructions(e.target.value)}
+                  placeholder="Gate code, landmark or entrance"
+                />
+              </span>
+            </label>
+            <section className="delivery-return" aria-label="Equipment return method">
+              <strong>How will the equipment be returned?</strong>
+              <div>
+                <button
+                  type="button"
+                  className={returnMethod === 'self' ? 'selected' : ''}
+                  onClick={() => setReturnMethod('self')}
+                >
+                  Return in Vorna Valley
+                </button>
+                <button
+                  type="button"
+                  className={returnMethod === 'collection' ? 'selected' : ''}
+                  onClick={() => setReturnMethod('collection')}
+                >
+                  Request paid collection
+                </button>
+              </div>
+            </section>
+            <p className="delivery-fee-note">
+              Delivery fee and availability are confirmed after approval. Keep
+              your contact number reachable around the delivery time.
+            </p>
+          </>
         ) : (
           <>
             <div className="collection-schedule">
