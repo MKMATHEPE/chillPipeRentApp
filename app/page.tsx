@@ -396,7 +396,7 @@ export default function BookingFlow() {
   if (step === 'flavours')
     return (
       <main className="flow-app">
-        <section className="flow-photo-head">
+        <section className="flow-photo-head flavours-head">
           <img src="/hookah-hero.webp" alt="Hookah with drifting smoke" />
           <Header step={step} cart={cart} onBack={() => navigateStep('home')} />
           <p>
@@ -409,7 +409,7 @@ export default function BookingFlow() {
             vibes
           </p>
         </section>
-        <section className="flow-sheet">
+        <section className="flow-sheet flavours-sheet">
           <div className="sheet-handle" />
           <h1>Select flavours</h1>
           <p>Choose up to 2 flavours per hookah.</p>
