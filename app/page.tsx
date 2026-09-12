@@ -9,6 +9,7 @@ import {
   MapPin,
   Menu,
   MessageCircle,
+  MessageSquarePlus,
   Minus,
   Plus,
   Search,
@@ -55,6 +56,18 @@ const flavours: Flavour[] = [
     name: 'Double Apple',
     description: 'A rich red-and-green apple hookah classic.',
     image: '/double-apple.webp',
+  },
+  {
+    id: 'grape',
+    name: 'Grape Mint',
+    description: 'Deep grape sweetness with a fresh mint finish.',
+    image: '/grape-mint.webp',
+  },
+  {
+    id: 'peach',
+    name: 'Peach Ice',
+    description: 'Juicy peach cooled with a clean icy finish.',
+    image: '/peach-ice.webp',
   },
 ];
 const money = (n: number) => `R${n.toLocaleString('en-ZA')}`;
@@ -239,6 +252,8 @@ export default function BookingFlow() {
   const [pipeQty, setPipeQty] = useState(1);
   const [selected, setSelected] = useState<string[]>(['lady', 'gum']);
   const [flavourSearch, setFlavourSearch] = useState('');
+  const [showSuggestion, setShowSuggestion] = useState(false);
+  const [flavourSuggestion, setFlavourSuggestion] = useState('');
   const [delivery, setDelivery] = useState(true);
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
@@ -270,6 +285,7 @@ export default function BookingFlow() {
         setPhone(draft.phone || '');
         setAddress(draft.address || '');
         setDate(draft.date || '');
+        setFlavourSuggestion(draft.flavourSuggestion || '');
       } catch {
         localStorage.removeItem('chill-pipe-draft');
       }
@@ -282,9 +298,26 @@ export default function BookingFlow() {
     if (draftReady)
       localStorage.setItem(
         'chill-pipe-draft',
-        JSON.stringify({ pipeQty, selected, delivery, phone, address, date }),
+        JSON.stringify({
+          pipeQty,
+          selected,
+          delivery,
+          phone,
+          address,
+          date,
+          flavourSuggestion,
+        }),
       );
-  }, [draftReady, pipeQty, selected, delivery, phone, address, date]);
+  }, [
+    draftReady,
+    pipeQty,
+    selected,
+    delivery,
+    phone,
+    address,
+    date,
+    flavourSuggestion,
+  ]);
   function navigateStep(next: Step) {
     setStep(next);
     const url = next === 'home' ? '/' : `/?step=${next}`;
@@ -318,7 +351,9 @@ export default function BookingFlow() {
           phone: phone.trim(),
           date,
           location: address.trim(),
-          notes: '',
+          notes: flavourSuggestion.trim()
+            ? `Flavour suggestion: ${flavourSuggestion.trim()}`
+            : '',
         },
         total,
       }),
@@ -431,7 +466,43 @@ export default function BookingFlow() {
                 onToggle={() => toggleFlavour(flavour.id)}
               />
             ))}
+            {!flavourSearch.trim() && (
+              <article className="flow-flavour suggestion-flavour-card">
+                <button
+                  type="button"
+                  aria-expanded={showSuggestion}
+                  onClick={() => setShowSuggestion((current) => !current)}
+                >
+                  <MessageSquarePlus />
+                  <span>
+                    <strong>Suggest a flavour</strong>
+                    <small>
+                      {flavourSuggestion || 'Tell us what you would love next.'}
+                    </small>
+                  </span>
+                </button>
+              </article>
+            )}
           </div>
+          {showSuggestion && (
+            <div className="flavour-suggestion-panel">
+              <label htmlFor="flavour-suggestion">Your flavour idea</label>
+              <div>
+                <input
+                  id="flavour-suggestion"
+                  autoFocus
+                  maxLength={60}
+                  placeholder="e.g. Mango & mint"
+                  value={flavourSuggestion}
+                  onChange={(event) => setFlavourSuggestion(event.target.value)}
+                />
+                <button type="button" onClick={() => setShowSuggestion(false)}>
+                  Save
+                </button>
+              </div>
+              <small>This suggestion does not use a flavour selection.</small>
+            </div>
+          )}
           {visibleFlavours.length === 0 && (
             <p className="flavour-empty">No flavours match your search.</p>
           )}
