@@ -12,7 +12,6 @@ import {
   MessageSquarePlus,
   Minus,
   Plus,
-  Search,
   ShoppingBag,
   Store,
   Truck,
@@ -251,7 +250,6 @@ export default function BookingFlow() {
   const [step, setStep] = useState<Step>('home');
   const [pipeQty, setPipeQty] = useState(1);
   const [selected, setSelected] = useState<string[]>(['lady', 'gum']);
-  const [flavourSearch, setFlavourSearch] = useState('');
   const [showSuggestion, setShowSuggestion] = useState(false);
   const [flavourSuggestion, setFlavourSuggestion] = useState('');
   const [delivery, setDelivery] = useState(true);
@@ -260,11 +258,6 @@ export default function BookingFlow() {
   const [date, setDate] = useState('');
   const [draftReady, setDraftReady] = useState(false);
   const flavourLimit = pipeQty * 2;
-  const visibleFlavours = flavours.filter((item) =>
-    `${item.name} ${item.description}`
-      .toLowerCase()
-      .includes(flavourSearch.trim().toLowerCase()),
-  );
   const total = useMemo(
     () => pipeQty * 550 + selected.length * 50,
     [pipeQty, selected],
@@ -447,18 +440,8 @@ export default function BookingFlow() {
         <section className="flow-sheet flavours-sheet">
           <div className="sheet-handle" />
           <h1>Select flavours</h1>
-          <p>Choose up to 2 flavours per hookah.</p>
-          <label className="flow-search">
-            <Search />
-            <input
-              aria-label="Search flavours"
-              placeholder="Search flavours..."
-              value={flavourSearch}
-              onChange={(event) => setFlavourSearch(event.target.value)}
-            />
-          </label>
           <div className="flow-flavour-grid">
-            {visibleFlavours.map((flavour) => (
+            {flavours.map((flavour) => (
               <FlavourCard
                 key={flavour.id}
                 flavour={flavour}
@@ -466,23 +449,21 @@ export default function BookingFlow() {
                 onToggle={() => toggleFlavour(flavour.id)}
               />
             ))}
-            {!flavourSearch.trim() && (
-              <article className="flow-flavour suggestion-flavour-card">
-                <button
-                  type="button"
-                  aria-expanded={showSuggestion}
-                  onClick={() => setShowSuggestion((current) => !current)}
-                >
-                  <MessageSquarePlus />
-                  <span>
-                    <strong>Suggest a flavour</strong>
-                    <small>
-                      {flavourSuggestion || 'Tell us what you would love next.'}
-                    </small>
-                  </span>
-                </button>
-              </article>
-            )}
+            <article className="flow-flavour suggestion-flavour-card">
+              <button
+                type="button"
+                aria-expanded={showSuggestion}
+                onClick={() => setShowSuggestion((current) => !current)}
+              >
+                <MessageSquarePlus />
+                <span>
+                  <strong>Suggest a flavour</strong>
+                  <small>
+                    {flavourSuggestion || 'Tell us what you would love next.'}
+                  </small>
+                </span>
+              </button>
+            </article>
           </div>
           {showSuggestion && (
             <div className="flavour-suggestion-panel">
@@ -502,9 +483,6 @@ export default function BookingFlow() {
               </div>
               <small>This suggestion does not use a flavour selection.</small>
             </div>
-          )}
-          {visibleFlavours.length === 0 && (
-            <p className="flavour-empty">No flavours match your search.</p>
           )}
           <div className="selected-head">
             <strong>
