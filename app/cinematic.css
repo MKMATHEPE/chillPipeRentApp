@@ -780,6 +780,13 @@
   font-size: 8px;
   text-decoration: underline;
 }
+.delivery-validation-message {
+  margin: 8px 0 0 !important;
+  color: #8a2d24 !important;
+  font-size: 11px !important;
+  font-weight: 700;
+  line-height: 1.4;
+}
 .collection-details {
   display: flex;
   align-items: center;

@@ -82,6 +82,7 @@ export async function POST(request: Request) {
   try {
     const body = (await request.json()) as {
       address?: unknown;
+      suburb?: unknown;
       latitude?: unknown;
       longitude?: unknown;
     };
@@ -105,6 +106,10 @@ export async function POST(request: Request) {
       if (!address)
         return json({ error: 'Enter a delivery address first.' }, 400);
       destination = await geocode(address);
+      const suburb =
+        typeof body.suburb === 'string' ? body.suburb.trim().slice(0, 100) : '';
+      if (!destination && suburb)
+        destination = await geocode(`${suburb}, Johannesburg, South Africa`);
       if (!destination)
         return json(
           { error: 'We could not find that address. Add more detail and try again.' },

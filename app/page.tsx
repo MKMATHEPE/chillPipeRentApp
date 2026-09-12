@@ -319,6 +319,7 @@ export default function BookingFlow() {
     status: 'idle',
   });
   const [showDeliveryDetails, setShowDeliveryDetails] = useState(false);
+  const [validationMessage, setValidationMessage] = useState('');
   const [date, setDate] = useState('');
   const [draftReady, setDraftReady] = useState(false);
   const flavourUnits = Object.values(flavourQuantities).reduce(
@@ -469,22 +470,42 @@ export default function BookingFlow() {
     setSuggestionDetails('');
     setEditingSuggestion(null);
   }
-  function finish() {
+  async function finish() {
     const bookingDate = new Date(date);
     const validTime =
       date.includes('T') &&
       collectionTimeSlots.includes(date.split('T')[1]) &&
       bookingDate.getTime() > Date.now();
-    if (
-      !phone.trim() ||
-      !address.trim() ||
-      (delivery && !suburb.trim()) ||
-      (delivery && deliveryQuote.status !== 'ready') ||
-      !validTime
-    ) {
+    const missing = [
+      !phone.trim() ? 'contact number' : '',
+      !address.trim() ? 'delivery address' : '',
+      delivery && !suburb.trim() ? 'area or suburb' : '',
+      !validTime ? 'valid rental date and time' : '',
+    ].filter(Boolean);
+    if (missing.length) {
+      setValidationMessage(`Please add your ${missing.join(', ')}.`);
+      if (!address.trim() || (delivery && !suburb.trim()))
+        setShowDeliveryDetails(true);
       navigateStep('delivery');
       return;
     }
+    let confirmedQuote = deliveryQuote;
+    if (delivery && deliveryQuote.status !== 'ready') {
+      const calculated = await calculateDeliveryQuote({
+        address: `${address}, ${suburb}, South Africa`,
+        suburb,
+      });
+      if (!calculated) {
+        setValidationMessage(
+          'We could not calculate the delivery fee. Check the address or pin your location.',
+        );
+        setShowDeliveryDetails(true);
+        navigateStep('delivery');
+        return;
+      }
+      confirmedQuote = calculated;
+    }
+    setValidationMessage('');
     localStorage.setItem(
       'chill-pipe-order',
       JSON.stringify({
@@ -497,8 +518,8 @@ export default function BookingFlow() {
           })),
         suggestedFlavours: suggestions,
         delivery,
-        deliveryFee: delivery ? deliveryQuote.fee : 0,
-        deliveryDistanceKm: delivery ? deliveryQuote.distanceKm : 0,
+        deliveryFee: delivery ? confirmedQuote.fee : 0,
+        deliveryDistanceKm: delivery ? confirmedQuote.distanceKm : 0,
         customer: {
           name: 'Customer',
           phone: phone.trim(),
@@ -531,6 +552,7 @@ export default function BookingFlow() {
   }
   async function calculateDeliveryQuote(payload: {
     address?: string;
+    suburb?: string;
     latitude?: number;
     longitude?: number;
   }) {
@@ -562,7 +584,14 @@ export default function BookingFlow() {
         setSuburb(quote.destinationSuburb || 'Pinned location');
         setLocationPinned(true);
       }
-      return true;
+      const confirmed: DeliveryQuote = {
+        status: 'ready',
+        distanceKm: quote.distanceKm || 0,
+        fee: quote.fee || 350,
+      };
+      setDeliveryQuote(confirmed);
+      setValidationMessage('');
+      return confirmed;
     } catch (error) {
       const message =
         error instanceof Error
@@ -570,7 +599,7 @@ export default function BookingFlow() {
           : 'Could not calculate delivery distance.';
       setDeliveryQuote({ status: 'error', message });
       setLocationStatus(message);
-      return false;
+      return null;
     }
   }
   if (step === 'home')
@@ -867,6 +896,7 @@ export default function BookingFlow() {
               setDelivery(true);
               setAddress(deliveryAddress);
               setDeliveryQuote({ status: 'idle' });
+              setValidationMessage('');
             }}
           />
           <DeliveryOption
@@ -929,6 +959,7 @@ export default function BookingFlow() {
                           setDeliveryAddress(e.target.value);
                           setLocationPinned(false);
                           setDeliveryQuote({ status: 'idle' });
+                          setValidationMessage('');
                         }}
                         placeholder="Street name and number"
                       />
@@ -978,6 +1009,7 @@ export default function BookingFlow() {
                         setSuburb(e.target.value);
                         setLocationPinned(false);
                         setDeliveryQuote({ status: 'idle' });
+                        setValidationMessage('');
                       }}
                       placeholder="e.g. Midrand"
                     />
@@ -1018,6 +1050,7 @@ export default function BookingFlow() {
                   onClick={() =>
                     void calculateDeliveryQuote({
                       address: `${address}, ${suburb}, South Africa`,
+                      suburb,
                     })
                   }
                 >
@@ -1093,6 +1126,11 @@ export default function BookingFlow() {
                 Distance powered by OpenStreetMap
               </a>
             </p>
+            {validationMessage ? (
+              <p className="delivery-validation-message" role="alert">
+                {validationMessage}
+              </p>
+            ) : null}
           </>
         ) : (
           <>
@@ -1175,6 +1213,11 @@ export default function BookingFlow() {
             </section>
           </>
         )}
+        {!delivery && validationMessage ? (
+          <p className="delivery-validation-message" role="alert">
+            {validationMessage}
+          </p>
+        ) : null}
         <PrimaryButton onClick={finish}>Continue</PrimaryButton>
         <small className="relax-copy">Relax. We handle the rest.</small>
       </section>
