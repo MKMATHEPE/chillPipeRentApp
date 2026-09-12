@@ -761,7 +761,7 @@ export default function BookingFlow() {
         <label className="booking-row">
           <MessageCircle />
           <span>
-            WhatsApp number
+            Contact number
             <input
               required
               type="tel"
