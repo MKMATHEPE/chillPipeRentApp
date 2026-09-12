@@ -394,6 +394,15 @@ export default function BookingFlow() {
     setSuggestionQuantity(suggestion.quantity);
     setEditingSuggestion(index);
   }
+  function changeSuggestionQuantity(index: number, change: number) {
+    setSuggestions((current) =>
+      current.map((item, itemIndex) =>
+        itemIndex === index
+          ? { ...item, quantity: Math.max(1, item.quantity + change) }
+          : item,
+      ),
+    );
+  }
   function saveSuggestion() {
     if (!suggestionName.trim()) return;
     const suggestion = {
@@ -623,13 +632,29 @@ export default function BookingFlow() {
                   {suggestions.map((suggestion, index) => (
                     <article key={`${suggestion.name}-${index}`}>
                       <div>
-                        <strong>
-                          {suggestion.name} × {suggestion.quantity}
-                        </strong>
+                        <strong>{suggestion.name}</strong>
                         {suggestion.details && (
                           <small>{suggestion.details}</small>
                         )}
                       </div>
+                      <span className="saved-suggestion-quantity">
+                        <button
+                          type="button"
+                          disabled={suggestion.quantity === 1}
+                          aria-label={`Decrease ${suggestion.name} quantity`}
+                          onClick={() => changeSuggestionQuantity(index, -1)}
+                        >
+                          <Minus />
+                        </button>
+                        <b>{suggestion.quantity}</b>
+                        <button
+                          type="button"
+                          aria-label={`Increase ${suggestion.name} quantity`}
+                          onClick={() => changeSuggestionQuantity(index, 1)}
+                        >
+                          <Plus />
+                        </button>
+                      </span>
                       <button
                         type="button"
                         aria-label={`Edit ${suggestion.name}`}
