@@ -15,6 +15,7 @@ import {
   ShoppingBag,
   Store,
   Truck,
+  X,
 } from 'lucide-react';
 
 type Step = 'home' | 'flavours' | 'delivery';
@@ -276,6 +277,7 @@ export default function BookingFlow() {
   });
   const [showSuggestion, setShowSuggestion] = useState(false);
   const [flavourSuggestion, setFlavourSuggestion] = useState('');
+  const [suggestionDetails, setSuggestionDetails] = useState('');
   const [delivery, setDelivery] = useState(true);
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
@@ -313,6 +315,7 @@ export default function BookingFlow() {
         setAddress(draft.address || '');
         setDate(draft.date || '');
         setFlavourSuggestion(draft.flavourSuggestion || '');
+        setSuggestionDetails(draft.suggestionDetails || '');
       } catch {
         localStorage.removeItem('chill-pipe-draft');
       }
@@ -333,6 +336,7 @@ export default function BookingFlow() {
           address,
           date,
           flavourSuggestion,
+          suggestionDetails,
         }),
       );
   }, [
@@ -344,6 +348,7 @@ export default function BookingFlow() {
     address,
     date,
     flavourSuggestion,
+    suggestionDetails,
   ]);
   function navigateStep(next: Step) {
     setStep(next);
@@ -382,7 +387,7 @@ export default function BookingFlow() {
           date,
           location: address.trim(),
           notes: flavourSuggestion.trim()
-            ? `Flavour suggestion: ${flavourSuggestion.trim()}`
+            ? `Flavour suggestion: ${flavourSuggestion.trim()}${suggestionDetails.trim() ? ` (${suggestionDetails.trim()})` : ''}`
             : '',
         },
         total,
@@ -495,33 +500,20 @@ export default function BookingFlow() {
               >
                 <MessageSquarePlus />
                 <span>
-                  <strong>Suggest a flavour</strong>
+                  <strong>
+                    {flavourSuggestion
+                      ? 'Suggestion saved'
+                      : "Can't find your flavour?"}
+                  </strong>
                   <small>
-                    {flavourSuggestion || 'Tell us what you would love next.'}
+                    {flavourSuggestion ||
+                      "Suggest one and we'll confirm availability."}
                   </small>
+                  {flavourSuggestion && <em>Edit</em>}
                 </span>
               </button>
             </article>
           </div>
-          {showSuggestion && (
-            <div className="flavour-suggestion-panel">
-              <label htmlFor="flavour-suggestion">Your flavour idea</label>
-              <div>
-                <input
-                  id="flavour-suggestion"
-                  autoFocus
-                  maxLength={60}
-                  placeholder="e.g. Mango & mint"
-                  value={flavourSuggestion}
-                  onChange={(event) => setFlavourSuggestion(event.target.value)}
-                />
-                <button type="button" onClick={() => setShowSuggestion(false)}>
-                  Save
-                </button>
-              </div>
-              <small>This suggestion does not use a flavour selection.</small>
-            </div>
-          )}
           <div className="selected-head">
             <strong>Selected flavour units ({flavourUnits})</strong>
           </div>
@@ -543,6 +535,66 @@ export default function BookingFlow() {
             Continue
           </PrimaryButton>
         </section>
+        {showSuggestion && (
+          <div
+            className="suggestion-backdrop"
+            role="presentation"
+            onClick={() => setShowSuggestion(false)}
+          >
+            <section
+              className="suggestion-sheet"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="suggestion-title"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="suggestion-sheet-handle" />
+              <button
+                className="suggestion-close"
+                type="button"
+                aria-label="Close flavour suggestion"
+                onClick={() => setShowSuggestion(false)}
+              >
+                <X />
+              </button>
+              <MessageSquarePlus className="suggestion-icon" />
+              <h2 id="suggestion-title">Suggest a flavour</h2>
+              <p>Tell us what you want and we’ll confirm availability.</p>
+              <label htmlFor="flavour-suggestion">
+                Flavour name
+                <input
+                  id="flavour-suggestion"
+                  autoFocus
+                  maxLength={60}
+                  placeholder="e.g. Mango mint"
+                  value={flavourSuggestion}
+                  onChange={(event) => setFlavourSuggestion(event.target.value)}
+                />
+              </label>
+              <label htmlFor="suggestion-details">
+                Brand or combination <span>Optional</span>
+                <input
+                  id="suggestion-details"
+                  maxLength={80}
+                  placeholder="e.g. Any brand, extra mint"
+                  value={suggestionDetails}
+                  onChange={(event) => setSuggestionDetails(event.target.value)}
+                />
+              </label>
+              <button
+                className="suggestion-save"
+                type="button"
+                disabled={!flavourSuggestion.trim()}
+                onClick={() => setShowSuggestion(false)}
+              >
+                <Check /> Save suggestion
+              </button>
+              <small>
+                Suggestions are not added to the price until confirmed.
+              </small>
+            </section>
+          </div>
+        )}
         <BottomNav
           active="flavours"
           onNavigate={navigateStep}
