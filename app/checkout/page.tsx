@@ -31,12 +31,14 @@ type Order = {
 const prices: Record<string, number> = {
   pipe: 550,
   premium: 650,
-  coal: 75,
+  coalPack: 30,
+  coal: 80,
   stove: 200,
 };
 const names: Record<string, string> = {
   pipe: 'Classic hookah',
   premium: 'Premium hookah',
+  coalPack: 'Extra coconut coals (8 pieces)',
   coal: 'Coal box (36 pieces)',
   stove: 'Coal stove',
 };
@@ -108,6 +110,8 @@ export default function Checkout() {
   const deliveryFee = order?.delivery ? order.deliveryFee ?? 350 : 0;
   const hookahUnits =
     (order?.quantities.pipe || 0) + (order?.quantities.premium || 0);
+  const includedFlavourUnits = Math.min(flavourUnits, hookahUnits);
+  const additionalFlavourUnits = Math.max(0, flavourUnits - hookahUnits);
   const deposit =
     (order?.quantities.pipe || 0) * 400 +
     (order?.quantities.premium || 0) * 600;
@@ -196,8 +200,18 @@ export default function Checkout() {
             <strong>Included</strong>
           </div>
           <div className="checkout-line">
-            <span>{flavourUnits} flavour units</span>
-            <strong>{money(flavourUnits * 50)}</strong>
+            <span>Flavour units included × {includedFlavourUnits}</span>
+            <strong>Included</strong>
+          </div>
+          {additionalFlavourUnits > 0 ? (
+            <div className="checkout-line">
+              <span>Additional flavour units × {additionalFlavourUnits}</span>
+              <strong>{money(additionalFlavourUnits * 50)}</strong>
+            </div>
+          ) : null}
+          <div className="checkout-line">
+            <span>Coconut coals included × {hookahUnits * 8}</span>
+            <strong>Included</strong>
           </div>
           {flavourItems.length > 0 ? (
             <p className="checkout-flavour-list">
