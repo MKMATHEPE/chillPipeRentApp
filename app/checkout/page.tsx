@@ -108,7 +108,6 @@ export default function Checkout() {
   const deliveryFee = order?.delivery ? order.deliveryFee ?? 350 : 0;
   const hookahUnits =
     (order?.quantities.pipe || 0) + (order?.quantities.premium || 0);
-  const includedFlavourUnits = Math.min(flavourUnits, hookahUnits);
   const additionalFlavourUnits = Math.max(0, flavourUnits - hookahUnits);
   const deposit =
     (order?.quantities.pipe || 0) * 400 +
@@ -181,25 +180,23 @@ export default function Checkout() {
               <strong>{money(line.amount)}</strong>
             </div>
           ))}
-          <div className="checkout-line">
-            <span>
-              Hookah tongs × {hookahUnits || 1}
-            </span>
-            <strong>Included</strong>
-          </div>
-          <div className="checkout-line">
-            <span>Hookah pipes × {(hookahUnits || 1) * 2}</span>
-            <strong>Included</strong>
-          </div>
-          <div className="checkout-line">
-            <span>
-              Disposable mouthpieces × {(hookahUnits || 1) * 4}
-            </span>
-            <strong>Included</strong>
-          </div>
-          <div className="checkout-line">
-            <span>Flavour units included × {includedFlavourUnits}</span>
-            <strong>Included</strong>
+          <div className="checkout-included">
+            <strong>
+              Included with your {hookahUnits === 1 ? 'hookah' : 'hookahs'}
+            </strong>
+            <p>
+              {hookahUnits * 2} pipes · {hookahUnits}{' '}
+              {hookahUnits === 1 ? 'tong' : 'tongs'} · {hookahUnits * 4}{' '}
+              disposable mouthpieces
+            </p>
+            <p>
+              {hookahUnits}{' '}
+              {hookahUnits === 1 ? 'flavour unit' : 'flavour units'} ·{' '}
+              {hookahUnits * 8} coconut coals
+            </p>
+            {flavourUnits === 0 ? (
+              <a href="/?step=flavours">Choose your included flavour</a>
+            ) : null}
           </div>
           {additionalFlavourUnits > 0 ? (
             <div className="checkout-line">
@@ -207,10 +204,6 @@ export default function Checkout() {
               <strong>{money(additionalFlavourUnits * 50)}</strong>
             </div>
           ) : null}
-          <div className="checkout-line">
-            <span>Coconut coals included × {hookahUnits * 8}</span>
-            <strong>Included</strong>
-          </div>
           {flavourItems.length > 0 ? (
             <p className="checkout-flavour-list">
               {flavourItems
