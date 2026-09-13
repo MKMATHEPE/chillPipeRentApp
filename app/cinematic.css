@@ -196,7 +196,11 @@
   margin: 0 4px 12px;
 }
 .flow-product > .flow-quantity {
-  margin-left: 4px;
+  position: absolute;
+  z-index: 2;
+  top: 28px;
+  left: 28px;
+  box-shadow: 0 6px 18px #0006;
 }
 .flow-product > button {
   position: absolute;
