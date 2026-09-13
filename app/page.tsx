@@ -1,14 +1,12 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
 import {
-  ArrowLeft,
   ArrowRight,
   Check,
   Clock3,
   Flame,
   Home,
   MapPin,
-  Menu,
   MessageCircle,
   MessageSquarePlus,
   Minus,
@@ -21,6 +19,7 @@ import {
   X,
   Zap,
 } from 'lucide-react';
+import { AppHeader } from '@/components/app-header';
 
 type Step = 'home' | 'flavours' | 'delivery';
 type Flavour = { id: string; name: string; description: string; image: string };
@@ -98,45 +97,6 @@ const localDateValue = (value = new Date()) => {
   return new Date(value.getTime() - offset).toISOString().slice(0, 10);
 };
 
-function BrandLogo() {
-  return (
-    <a className="flow-brand" href="/" aria-label="The Chill Pipe home">
-      <img src="/chill-pipe-logo.webp" alt="The Chill Pipe" />
-      <span>Hookah rentals</span>
-    </a>
-  );
-}
-function Header({
-  step,
-  cart,
-  onBack,
-}: {
-  step: Step;
-  cart: number;
-  onBack?: () => void;
-}) {
-  return (
-    <header className="flow-header">
-      {onBack ? (
-        <button aria-label="Go back" onClick={onBack}>
-          <ArrowLeft />
-        </button>
-      ) : (
-        <BrandLogo />
-      )}
-      {onBack && <BrandLogo />}
-      <div className="flow-head-actions">
-        <button aria-label="View order">
-          <ShoppingBag />
-          <i>{cart}</i>
-        </button>
-        <button aria-label="Open menu">
-          <Menu />
-        </button>
-      </div>
-    </header>
-  );
-}
 function PrimaryButton({
   children,
   onClick,
@@ -344,7 +304,6 @@ export default function BookingFlow() {
       stoveQty * 200,
     [pipeQty, premiumQty, additionalFlavourUnits, coalPackQty, stoveQty],
   );
-  const cart = pipeQty + premiumQty + flavourUnits + coalPackQty + stoveQty;
   const collectionDay = date.split('T')[0] || '';
   const collectionTime = date.split('T')[1] || '';
   useEffect(() => {
@@ -633,7 +592,7 @@ export default function BookingFlow() {
   if (step === 'home')
     return (
       <main className="flow-app dark">
-        <Header step={step} cart={cart} />
+        <AppHeader />
         <section className="flow-home-hero">
           <img
             src="/hookah-hero.webp"
@@ -727,7 +686,7 @@ export default function BookingFlow() {
       <main className="flow-app">
         <section className="flow-photo-head flavours-head">
           <img src="/hookah-hero.webp" alt="Hookah with drifting smoke" />
-          <Header step={step} cart={cart} onBack={() => navigateStep('home')} />
+          <AppHeader onBack={() => navigateStep('home')} />
           <p>
             Same
             <br />
@@ -923,11 +882,7 @@ export default function BookingFlow() {
     <main className="flow-app">
       <section className="flow-photo-head delivery-head">
         <img src="/hookah-hero.webp" alt="Hookah hose with drifting smoke" />
-        <Header
-          step={step}
-          cart={cart}
-          onBack={() => navigateStep('flavours')}
-        />
+        <AppHeader onBack={() => navigateStep('flavours')} />
         <p>
           Your session
           <br />

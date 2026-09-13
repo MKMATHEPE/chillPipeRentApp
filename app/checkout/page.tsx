@@ -1,14 +1,13 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
 import {
-  ArrowLeft,
   Check,
   Home,
   LockKeyhole,
-  Menu,
   ShoppingBag,
   Truck,
 } from 'lucide-react';
+import { AppHeader } from '@/components/app-header';
 
 type FlavourItem = string | { name: string; quantity: number };
 type SuggestedFlavour = { name: string; details: string; quantity: number };
@@ -130,24 +129,7 @@ export default function Checkout() {
     <main className="flow-app checkout-flow">
       <section className="flow-photo-head checkout-photo-head">
         <img src="/hookah-hero.webp" alt="Premium hookah with drifting smoke" />
-        <header className="flow-header">
-          <a href="/?step=delivery" aria-label="Back to delivery">
-            <ArrowLeft />
-          </a>
-          <a className="flow-brand" href="/" aria-label="The Chill Pipe home">
-            <img src="/chill-pipe-logo.webp" alt="The Chill Pipe" />
-            <span>Hookah rentals</span>
-          </a>
-          <div className="flow-head-actions">
-            <span className="checkout-bag">
-              <ShoppingBag />
-              <i>{hookahUnits + flavourUnits}</i>
-            </span>
-            <span>
-              <Menu />
-            </span>
-          </div>
-        </header>
+        <AppHeader onBack={() => (window.location.href = '/?step=delivery')} />
         <p>
           Review
           <br />
