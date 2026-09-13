@@ -951,7 +951,7 @@
   object-fit: cover;
 }
 .flow-home-hero {
-  height: 325px;
+  height: 350px;
 }
 .flow-home-hero > div {
   bottom: 68px;
@@ -961,7 +961,7 @@
 }
 @media (min-width: 900px) {
   .flow-home-hero {
-    height: 320px;
+    height: 340px;
   }
 }
 .flavours-head {
