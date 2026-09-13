@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { ArrowLeft, Check, ChevronRight, CircleHelp, FileText, Menu, MessageCircle, Pencil, UserRound, X } from 'lucide-react';
+import { ArrowLeft, CalendarDays, Check, ChevronRight, CircleHelp, FileText, MapPin, Menu, MessageCircle, Pencil, UserRound, X } from 'lucide-react';
 
 type SavedProfile = { phone?: string; location?: string; bookingReference?: string };
 
@@ -69,23 +69,31 @@ export function AppHeader({ onBack }: { onBack?: () => void }) {
     {panel ? <div className="header-panel-layer">
       <button className="header-panel-backdrop" aria-label="Close panel" onClick={() => setPanel(null)} />
       <aside className="header-panel" aria-label={panel === 'profile' ? 'Profile' : 'Menu'}>
-        <div className="header-panel-title"><h2>{panel === 'profile' ? 'Profile' : 'Menu'}</h2><button aria-label="Close panel" onClick={() => setPanel(null)}><X /></button></div>
+        <div className="header-panel-visual">
+          <img src="/hookah-hero.webp" alt="" />
+          <BrandLogo />
+          <button aria-label="Close panel" onClick={() => setPanel(null)}><X /></button>
+        </div>
+        <div className="header-panel-sheet">
+          <span className="header-panel-handle" />
+          <div className="header-panel-title"><h2>{panel === 'profile' ? 'Profile' : 'Menu'}</h2></div>
         {panel === 'profile' ? <div className="profile-panel-content">
           {editing ? <div className="profile-edit-form">
             <label><span>Contact number</span><input type="tel" value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="e.g. 076 850 5523" /></label>
             <label><span>Delivery address</span><textarea value={location} onChange={(event) => setLocation(event.target.value)} placeholder="Enter your delivery address" /></label>
             <div><button onClick={() => setEditing(false)}>Cancel</button><button className="profile-save" onClick={saveProfile} disabled={!phone.trim()}><Check /> Save details</button></div>
           </div> : <>
+            <section><UserRound /><span><small>Customer details</small><strong>{profile.phone || 'No contact number saved'}</strong></span><ChevronRight /></section>
+            <section><MapPin /><span><small>Saved delivery address</small><strong>{profile.location || 'No address saved'}</strong></span><ChevronRight /></section>
+            <a className="header-panel-link" href={trackHref}><CalendarDays /><span>My bookings</span><ChevronRight /></a>
             <button className="profile-edit" onClick={() => setEditing(true)}><Pencil /> Edit details</button>
-            <section><small>Customer details</small><strong>{profile.phone || 'No contact number saved'}</strong></section>
-            <section><small>Saved delivery address</small><strong>{profile.location || 'No address saved'}</strong></section>
-            <a className="header-panel-link" href={trackHref}><span>My bookings</span><ChevronRight /></a>
           </>}
         </div> : <nav className="header-panel-menu">
           <a href="/how-it-works"><CircleHelp /><span>How it works</span><ChevronRight /></a>
           <a href="https://wa.me/27768505523" target="_blank" rel="noreferrer"><MessageCircle /><span>Contact us</span><ChevronRight /></a>
           <a href="/terms"><FileText /><span>Terms and conditions</span><ChevronRight /></a>
         </nav>}
+        </div>
       </aside>
     </div> : null}
   </>;
