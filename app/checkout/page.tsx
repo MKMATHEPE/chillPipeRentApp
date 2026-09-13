@@ -169,9 +169,7 @@ export default function Checkout() {
             </div>
           ))}
           <div className="checkout-line">
-            <span>
-              Hookah tongs × {order.quantities.pipe || 1}
-            </span>
+            <span>Hookah tongs × 1</span>
             <strong>Included</strong>
           </div>
           <div className="checkout-line">
