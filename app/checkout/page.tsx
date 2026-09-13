@@ -175,6 +175,16 @@ export default function Checkout() {
             <strong>Included</strong>
           </div>
           <div className="checkout-line">
+            <span>Hookah hoses × {(order.quantities.pipe || 1) * 2}</span>
+            <strong>Included</strong>
+          </div>
+          <div className="checkout-line">
+            <span>
+              Disposable mouthpieces × {(order.quantities.pipe || 1) * 4}
+            </span>
+            <strong>Included</strong>
+          </div>
+          <div className="checkout-line">
             <span>{flavourUnits} flavour units</span>
             <strong>{money(flavourUnits * 50)}</strong>
           </div>
@@ -201,7 +211,7 @@ export default function Checkout() {
           ) : null}
           <div className="checkout-line">
             <span>Refundable deposit</span>
-            <strong>{money((order.quantities.pipe || 0) * 308)}</strong>
+            <strong>{money((order.quantities.pipe || 0) * 400)}</strong>
           </div>
           <div className="checkout-line">
             <span>
@@ -221,7 +231,7 @@ export default function Checkout() {
             <strong>
               {money(
                 order.total +
-                  (order.quantities.pipe || 0) * 308 +
+                  (order.quantities.pipe || 0) * 400 +
                   deliveryFee,
               )}
             </strong>

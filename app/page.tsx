@@ -650,7 +650,7 @@ export default function BookingFlow() {
                 <img src="/hookah-hero.webp" alt="Classic hookah" />
               </div>
               <h2>Classic hookah · R550</h2>
-              <p>Everything you need for a smooth session.</p>
+              <p>2 hoses · 4 disposable mouthpieces · R400 deposit.</p>
               <Quantity value={pipeQty} onChange={setPipeQty} />
             </article>
             <article className="flow-product muted-card">
@@ -658,7 +658,7 @@ export default function BookingFlow() {
                 <img src="/hookah-hero.webp" alt="Premium hookah" />
               </div>
               <h2>Premium hookah</h2>
-              <p>A signature setup. Coming soon.</p>
+              <p>2 hoses · 4 disposable mouthpieces · R600 deposit. Coming soon.</p>
               <button aria-label="Premium hookah coming soon">
                 <ArrowRight />
               </button>
