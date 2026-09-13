@@ -299,7 +299,6 @@ export default function BookingFlow() {
   const [pipeQty, setPipeQty] = useState(1);
   const [premiumQty, setPremiumQty] = useState(0);
   const [coalPackQty, setCoalPackQty] = useState(0);
-  const [coalQty, setCoalQty] = useState(0);
   const [stoveQty, setStoveQty] = useState(0);
   const [flavourQuantities, setFlavourQuantities] = useState<
     Record<string, number>
@@ -342,12 +341,10 @@ export default function BookingFlow() {
       premiumQty * 650 +
       additionalFlavourUnits * 50 +
       coalPackQty * 30 +
-      coalQty * 80 +
       stoveQty * 200,
-    [pipeQty, premiumQty, additionalFlavourUnits, coalPackQty, coalQty, stoveQty],
+    [pipeQty, premiumQty, additionalFlavourUnits, coalPackQty, stoveQty],
   );
-  const cart =
-    pipeQty + premiumQty + flavourUnits + coalPackQty + coalQty + stoveQty;
+  const cart = pipeQty + premiumQty + flavourUnits + coalPackQty + stoveQty;
   const collectionDay = date.split('T')[0] || '';
   const collectionTime = date.split('T')[1] || '';
   useEffect(() => {
@@ -360,7 +357,6 @@ export default function BookingFlow() {
         setPipeQty(Math.max(0, Number(draft.pipeQty ?? 1)));
         setPremiumQty(Math.max(0, Number(draft.premiumQty) || 0));
         setCoalPackQty(Math.max(0, Number(draft.coalPackQty) || 0));
-        setCoalQty(Math.max(0, Number(draft.coalQty) || 0));
         setStoveQty(Math.max(0, Number(draft.stoveQty) || 0));
         if (
           draft.flavourQuantities &&
@@ -410,7 +406,6 @@ export default function BookingFlow() {
           pipeQty,
           premiumQty,
           coalPackQty,
-          coalQty,
           stoveQty,
           flavourQuantities,
           delivery,
@@ -429,7 +424,6 @@ export default function BookingFlow() {
     pipeQty,
     premiumQty,
     coalPackQty,
-    coalQty,
     stoveQty,
     flavourQuantities,
     delivery,
@@ -542,7 +536,6 @@ export default function BookingFlow() {
           pipe: pipeQty,
           premium: premiumQty,
           coalPack: coalPackQty,
-          coal: coalQty,
           stove: stoveQty,
         },
         selectedFlavours: flavours
@@ -702,20 +695,10 @@ export default function BookingFlow() {
                 <Flame />
               </i>
               <span>
-                <strong>Extra coconut coals</strong>
+                <strong>Coconut coals</strong>
                 <small>8 pieces · R30</small>
               </span>
               <Quantity value={coalPackQty} onChange={setCoalPackQty} min={0} />
-            </div>
-            <div className="setup-addon-row">
-              <i>
-                <Flame />
-              </i>
-              <span>
-                <strong>Coal box</strong>
-                <small>36 pieces · R80</small>
-              </span>
-              <Quantity value={coalQty} onChange={setCoalQty} min={0} />
             </div>
             <div className="setup-addon-row">
               <i>

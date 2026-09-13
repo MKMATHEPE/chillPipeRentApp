@@ -32,14 +32,12 @@ const prices: Record<string, number> = {
   pipe: 550,
   premium: 650,
   coalPack: 30,
-  coal: 80,
   stove: 200,
 };
 const names: Record<string, string> = {
   pipe: 'Classic hookah',
   premium: 'Premium hookah',
-  coalPack: 'Extra coconut coals (8 pieces)',
-  coal: 'Coal box (36 pieces)',
+  coalPack: 'Coconut coals (8 pieces)',
   stove: 'Coal stove',
 };
 const money = (value: number) => `R${value.toLocaleString('en-ZA')}`;
@@ -90,7 +88,7 @@ export default function Checkout() {
     () =>
       order
         ? Object.entries(order.quantities)
-            .filter(([, q]) => q > 0)
+            .filter(([id, q]) => q > 0 && prices[id] !== undefined)
             .map(([id, q]) => ({
               name: names[id],
               qty: q,

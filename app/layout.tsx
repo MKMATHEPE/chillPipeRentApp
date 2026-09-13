@@ -17,7 +17,7 @@ const geistSans = Geist({
 export const metadata: Metadata = {
   title: 'Request a Hookah Rental | The Chill Pipe',
   description:
-    'Build your 24-hour hookah rental request with The Chill Pipe. Choose pipes, flavours, coal, a stove, and delivery or collection.',
+    'Build your 24-hour hookah rental request with The Chill Pipe. Choose hookahs, flavours, coconut coals, a stove, and delivery or collection.',
   openGraph: {
     title: 'The Chill Pipe',
     description: 'Bring the chill. We bring the pipe.',

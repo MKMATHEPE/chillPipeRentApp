@@ -1,7 +1,7 @@
 import { ArrowRight, CalendarCheck, MessageCircle, PackageCheck, Truck } from 'lucide-react';
 import AppDock from '../components/AppDock';
 const steps = [
-  { number: '01', icon: PackageCheck, title: 'Build your setup', text: 'Choose your hookah pipes, flavours, coal boxes and optional coal stove.' },
+  { number: '01', icon: PackageCheck, title: 'Build your setup', text: 'Choose your hookahs, flavours, coconut coals and optional coal stove.' },
   { number: '02', icon: CalendarCheck, title: 'Share the details', text: 'Tell us your preferred date, location and any useful event notes.' },
   { number: '03', icon: MessageCircle, title: 'Approve & pay', text: 'We confirm availability and delivery pricing, then you pay securely by Yoco or EFT.' },
   { number: '04', icon: Truck, title: 'Enjoy & return', text: 'Receive or collect the setup, enjoy it for 24 hours, then return it for inspection and deposit refund.' },
