@@ -2,7 +2,7 @@ import AppDock from '../components/AppDock';
 
 const terms = [
   'Booking is confirmed once the final quoted amount, including the refundable security deposit, has been paid in full.',
-  'A refundable security deposit of R400 applies to each Classic hookah and R600 applies to each Premium hookah.',
+  'A refundable security deposit of R400 applies to each Classic hookah and R650 applies to each Premium hookah.',
   'Every hookah is supplied with two pipes, four disposable mouthpieces, one flavour unit and eight coconut coals.',
   'Additional flavour units cost R50 each, and an additional pack of eight coconut coals costs R30.',
   'Equipment must be returned within 24 hours of the confirmed collection time, complete and in the same condition supplied.',

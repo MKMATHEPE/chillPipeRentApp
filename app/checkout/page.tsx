@@ -30,7 +30,7 @@ type Order = {
 };
 const prices: Record<string, number> = {
   pipe: 550,
-  premium: 650,
+  premium: 800,
   coalPack: 30,
   stove: 200,
 };
@@ -112,7 +112,7 @@ export default function Checkout() {
   const additionalFlavourUnits = Math.max(0, flavourUnits - hookahUnits);
   const deposit =
     (order?.quantities.pipe || 0) * 400 +
-    (order?.quantities.premium || 0) * 600;
+    (order?.quantities.premium || 0) * 650;
   if (!order)
     return (
       <main className="empty-cart">
