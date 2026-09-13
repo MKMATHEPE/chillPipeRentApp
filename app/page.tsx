@@ -358,6 +358,18 @@ export default function BookingFlow() {
     setDraftReady(true);
   }, []);
   useEffect(() => {
+    const syncProfile = (event: Event) => {
+      const detail = (event as CustomEvent<{ phone?: string; location?: string }>).detail;
+      if (detail.phone) setPhone(detail.phone);
+      if (delivery && detail.location) {
+        setAddress(detail.location);
+        setDeliveryAddress(detail.location);
+      }
+    };
+    window.addEventListener('chill-pipe-profile-updated', syncProfile);
+    return () => window.removeEventListener('chill-pipe-profile-updated', syncProfile);
+  }, [delivery]);
+  useEffect(() => {
     if (draftReady)
       localStorage.setItem(
         'chill-pipe-draft',
