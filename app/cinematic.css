@@ -1711,6 +1711,9 @@
   padding: 0;
   margin: 0 0 28px;
 }
+.profile-sheet .header-panel-title {
+  margin-bottom: 12px;
+}
 .header-panel-title h2 {
   color: #111;
   font-size: clamp(44px, 12vw, 58px);
@@ -1739,6 +1742,35 @@
   align-items: center;
   gap: 14px;
   padding: 14px 4px;
+}
+.profile-panel-content .profile-contact-summary {
+  min-height: 82px;
+  grid-template-columns: 42px minmax(0, 1fr);
+}
+.profile-panel-content .profile-address-summary {
+  min-height: 68px;
+  grid-template-columns: 42px minmax(0, 1fr);
+}
+.profile-contact-summary strong {
+  font: 400 20px/1.25 Georgia, serif;
+}
+.profile-contact-summary small {
+  margin: 4px 0 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.profile-contact-summary em {
+  display: block;
+  margin-top: 4px;
+  color: #777;
+  font-size: 12px;
+  font-style: normal;
+}
+.profile-address-summary strong {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .profile-panel-content section > svg:first-child,
 .header-panel-link > svg:first-child,

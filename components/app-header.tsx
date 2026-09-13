@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { ArrowLeft, CalendarDays, Check, ChevronRight, CircleHelp, FileText, Mail, MapPin, Menu, MessageCircle, Pencil, Phone, PhoneCall, UserRound, X } from 'lucide-react';
+import { ArrowLeft, CalendarDays, Check, ChevronRight, CircleHelp, FileText, MapPin, Menu, MessageCircle, Pencil, UserRound, X } from 'lucide-react';
 
 type SavedProfile = {
   fullName?: string;
@@ -112,7 +112,7 @@ export function AppHeader({ onBack }: { onBack?: () => void }) {
           <BrandLogo />
           <button aria-label="Close panel" onClick={() => setPanel(null)}><X /></button>
         </div>
-        <div className="header-panel-sheet">
+        <div className={`header-panel-sheet ${panel === 'profile' ? 'profile-sheet' : ''}`}>
           <span className="header-panel-handle" />
           <div className="header-panel-title"><h2>{panel === 'profile' ? 'Profile' : 'Menu'}</h2></div>
         {panel === 'profile' ? <div className="profile-panel-content">
@@ -124,11 +124,18 @@ export function AppHeader({ onBack }: { onBack?: () => void }) {
             <label><span>Alternative contact number <em>Optional</em></span><input type="tel" value={alternativePhone} onChange={(event) => setAlternativePhone(event.target.value)} placeholder="Enter another contact number" /></label>
             <div><button onClick={() => setEditing(false)}>Cancel</button><button className="profile-save" onClick={saveProfile} disabled={!phone.trim()}><Check /> Save details</button></div>
           </div> : <>
-            <section><UserRound /><span><small>Full name</small><strong>{profile.fullName || 'Not added'}</strong></span><ChevronRight /></section>
-            <section><Phone /><span><small>Contact number</small><strong>{profile.phone || 'Not added'}</strong></span><ChevronRight /></section>
-            <section><Mail /><span><small>Email address</small><strong>{profile.email || 'Not added'}</strong></span><ChevronRight /></section>
-            <section><MapPin /><span><small>Saved delivery address</small><strong>{profile.location || 'No address saved'}</strong></span><ChevronRight /></section>
-            <section><PhoneCall /><span><small>Alternative contact number</small><strong>{profile.alternativePhone || 'Optional'}</strong></span><ChevronRight /></section>
+            <section className="profile-contact-summary">
+              <UserRound />
+              <span>
+                <strong>{profile.fullName || 'Add your name'}</strong>
+                <small>{[profile.phone, profile.email].filter(Boolean).join(' · ') || 'Add your contact details'}</small>
+                {profile.alternativePhone ? <em>Alternative: {profile.alternativePhone}</em> : null}
+              </span>
+            </section>
+            <section className="profile-address-summary">
+              <MapPin />
+              <span><small>Delivery address</small><strong title={profile.location}>{profile.location || 'No address saved'}</strong></span>
+            </section>
             <a className="header-panel-link" href={trackHref}><CalendarDays /><span>My bookings</span><ChevronRight /></a>
             <button className="profile-edit" onClick={() => setEditing(true)}><Pencil /> Edit details</button>
           </>}
