@@ -1587,6 +1587,12 @@
   font-size: 12px;
   font-weight: 700;
 }
+.profile-edit-form label em {
+  float: right;
+  color: #888;
+  font-style: normal;
+  font-weight: 400;
+}
 .profile-edit-form input,
 .profile-edit-form textarea {
   width: 100%;

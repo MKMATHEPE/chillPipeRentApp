@@ -1,16 +1,26 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { ArrowLeft, CalendarDays, Check, ChevronRight, CircleHelp, FileText, MapPin, Menu, MessageCircle, Pencil, UserRound, X } from 'lucide-react';
+import { ArrowLeft, CalendarDays, Check, ChevronRight, CircleHelp, FileText, Mail, MapPin, Menu, MessageCircle, Pencil, Phone, PhoneCall, UserRound, X } from 'lucide-react';
 
-type SavedProfile = { phone?: string; location?: string; bookingReference?: string };
+type SavedProfile = {
+  fullName?: string;
+  phone?: string;
+  email?: string;
+  location?: string;
+  alternativePhone?: string;
+  bookingReference?: string;
+};
 
 export function AppHeader({ onBack }: { onBack?: () => void }) {
   const [panel, setPanel] = useState<'profile' | 'menu' | null>(null);
   const [profile, setProfile] = useState<SavedProfile>({});
   const [editing, setEditing] = useState(false);
+  const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
   const [location, setLocation] = useState('');
+  const [alternativePhone, setAlternativePhone] = useState('');
 
   useEffect(() => {
     try {
@@ -19,13 +29,19 @@ export function AppHeader({ onBack }: { onBack?: () => void }) {
       const order = JSON.parse(localStorage.getItem('chill-pipe-order') || '{}');
       const booking = JSON.parse(localStorage.getItem('chill-pipe-booking-access') || '{}');
       const nextProfile = {
+        fullName: saved.fullName || (order.customer?.name !== 'Customer' ? order.customer?.name : ''),
         phone: saved.phone || draft.phone || order.customer?.phone || booking.phone,
+        email: saved.email,
         location: saved.location || draft.address || order.customer?.location,
+        alternativePhone: saved.alternativePhone,
         bookingReference: booking.reference,
       };
       setProfile(nextProfile);
+      setFullName(nextProfile.fullName || '');
       setPhone(nextProfile.phone || '');
+      setEmail(nextProfile.email || '');
       setLocation(nextProfile.location || '');
+      setAlternativePhone(nextProfile.alternativePhone || '');
     } catch {
       setProfile({});
     }
@@ -43,13 +59,35 @@ export function AppHeader({ onBack }: { onBack?: () => void }) {
     : '/track';
 
   function saveProfile() {
-    const nextProfile = { ...profile, phone: phone.trim(), location: location.trim() };
+    const nextProfile = {
+      ...profile,
+      fullName: fullName.trim(),
+      phone: phone.trim(),
+      email: email.trim(),
+      location: location.trim(),
+      alternativePhone: alternativePhone.trim(),
+    };
     localStorage.setItem('chill-pipe-profile', JSON.stringify(nextProfile));
     const rawDraft = localStorage.getItem('chill-pipe-draft');
     if (rawDraft) {
       try {
         const draft = JSON.parse(rawDraft);
         localStorage.setItem('chill-pipe-draft', JSON.stringify({ ...draft, phone: nextProfile.phone, address: nextProfile.location }));
+      } catch {}
+    }
+    const rawOrder = localStorage.getItem('chill-pipe-order');
+    if (rawOrder) {
+      try {
+        const order = JSON.parse(rawOrder);
+        localStorage.setItem('chill-pipe-order', JSON.stringify({
+          ...order,
+          customer: {
+            ...order.customer,
+            name: nextProfile.fullName || order.customer?.name,
+            phone: nextProfile.phone,
+            location: nextProfile.location || order.customer?.location,
+          },
+        }));
       } catch {}
     }
     setProfile(nextProfile);
@@ -79,12 +117,18 @@ export function AppHeader({ onBack }: { onBack?: () => void }) {
           <div className="header-panel-title"><h2>{panel === 'profile' ? 'Profile' : 'Menu'}</h2></div>
         {panel === 'profile' ? <div className="profile-panel-content">
           {editing ? <div className="profile-edit-form">
+            <label><span>Full name</span><input value={fullName} onChange={(event) => setFullName(event.target.value)} placeholder="Enter your full name" /></label>
             <label><span>Contact number</span><input type="tel" value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="e.g. 076 850 5523" /></label>
+            <label><span>Email address</span><input type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="Enter your email address" /></label>
             <label><span>Delivery address</span><textarea value={location} onChange={(event) => setLocation(event.target.value)} placeholder="Enter your delivery address" /></label>
+            <label><span>Alternative contact number <em>Optional</em></span><input type="tel" value={alternativePhone} onChange={(event) => setAlternativePhone(event.target.value)} placeholder="Enter another contact number" /></label>
             <div><button onClick={() => setEditing(false)}>Cancel</button><button className="profile-save" onClick={saveProfile} disabled={!phone.trim()}><Check /> Save details</button></div>
           </div> : <>
-            <section><UserRound /><span><small>Customer details</small><strong>{profile.phone || 'No contact number saved'}</strong></span><ChevronRight /></section>
+            <section><UserRound /><span><small>Full name</small><strong>{profile.fullName || 'Not added'}</strong></span><ChevronRight /></section>
+            <section><Phone /><span><small>Contact number</small><strong>{profile.phone || 'Not added'}</strong></span><ChevronRight /></section>
+            <section><Mail /><span><small>Email address</small><strong>{profile.email || 'Not added'}</strong></span><ChevronRight /></section>
             <section><MapPin /><span><small>Saved delivery address</small><strong>{profile.location || 'No address saved'}</strong></span><ChevronRight /></section>
+            <section><PhoneCall /><span><small>Alternative contact number</small><strong>{profile.alternativePhone || 'Optional'}</strong></span><ChevronRight /></section>
             <a className="header-panel-link" href={trackHref}><CalendarDays /><span>My bookings</span><ChevronRight /></a>
             <button className="profile-edit" onClick={() => setEditing(true)}><Pencil /> Edit details</button>
           </>}

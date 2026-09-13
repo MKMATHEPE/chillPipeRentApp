@@ -520,7 +520,13 @@ export default function BookingFlow() {
         deliveryFee: delivery ? confirmedQuote.fee : 0,
         deliveryDistanceKm: delivery ? confirmedQuote.distanceKm : 0,
         customer: {
-          name: 'Customer',
+          name: (() => {
+            try {
+              return JSON.parse(localStorage.getItem('chill-pipe-profile') || '{}').fullName || 'Customer';
+            } catch {
+              return 'Customer';
+            }
+          })(),
           phone: phone.trim(),
           date,
           location: delivery

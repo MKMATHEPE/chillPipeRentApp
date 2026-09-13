@@ -55,6 +55,12 @@ export default function Checkout() {
   useEffect(() => {
     const raw = localStorage.getItem('chill-pipe-order');
     if (raw) setOrder(JSON.parse(raw));
+    const syncProfile = () => {
+      const updated = localStorage.getItem('chill-pipe-order');
+      if (updated) setOrder(JSON.parse(updated));
+    };
+    window.addEventListener('chill-pipe-profile-updated', syncProfile);
+    return () => window.removeEventListener('chill-pipe-profile-updated', syncProfile);
   }, []);
   async function placeOrder() {
     if (!order || submitting) return;
