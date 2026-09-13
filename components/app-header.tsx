@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { ArrowLeft, CalendarDays, Check, ChevronRight, CircleHelp, FileText, MapPin, Menu, MessageCircle, Pencil, UserRound, X } from 'lucide-react';
+import { ArrowLeft, CalendarDays, Check, ChevronRight, CircleHelp, FileText, LogOut, MapPin, Menu, MessageCircle, Pencil, UserRound, X } from 'lucide-react';
 
 type SavedProfile = {
   fullName?: string;
@@ -95,6 +95,12 @@ export function AppHeader({ onBack }: { onBack?: () => void }) {
     window.dispatchEvent(new CustomEvent('chill-pipe-profile-updated', { detail: nextProfile }));
   }
 
+  function logOut() {
+    if (!window.confirm('Log out and clear your saved details from this device?')) return;
+    ['chill-pipe-profile', 'chill-pipe-booking-access', 'chill-pipe-order', 'chill-pipe-draft'].forEach((key) => localStorage.removeItem(key));
+    window.location.href = '/';
+  }
+
   return <>
     <header className="flow-header">
       {onBack ? <button aria-label="Go back" onClick={onBack}><ArrowLeft /></button> : <BrandLogo />}
@@ -138,6 +144,7 @@ export function AppHeader({ onBack }: { onBack?: () => void }) {
             </section>
             <a className="header-panel-link" href={trackHref}><CalendarDays /><span>My bookings</span><ChevronRight /></a>
             <button className="profile-edit" onClick={() => setEditing(true)}><Pencil /> Edit details</button>
+            <button className="profile-logout" onClick={logOut}><LogOut /> Log out</button>
           </>}
         </div> : <nav className="header-panel-menu">
           <a href="/how-it-works"><CircleHelp /><span>How it works</span><ChevronRight /></a>
