@@ -193,16 +193,18 @@ function BottomNav({
 function Quantity({
   value,
   onChange,
+  min = 1,
 }: {
   value: number;
   onChange: (value: number) => void;
+  min?: number;
 }) {
   return (
     <div className="flow-quantity">
       <button
         aria-label="Decrease quantity"
-        disabled={value === 1}
-        onClick={() => onChange(Math.max(1, value - 1))}
+        disabled={value === min}
+        onClick={() => onChange(Math.max(min, value - 1))}
       >
         <Minus />
       </button>
@@ -295,6 +297,7 @@ function DeliveryOption({
 export default function BookingFlow() {
   const [step, setStep] = useState<Step>('home');
   const [pipeQty, setPipeQty] = useState(1);
+  const [premiumQty, setPremiumQty] = useState(0);
   const [coalQty, setCoalQty] = useState(0);
   const [stoveQty, setStoveQty] = useState(0);
   const [flavourQuantities, setFlavourQuantities] = useState<
@@ -331,10 +334,15 @@ export default function BookingFlow() {
     0,
   );
   const total = useMemo(
-    () => pipeQty * 550 + flavourUnits * 50 + coalQty * 75 + stoveQty * 200,
-    [pipeQty, flavourUnits, coalQty, stoveQty],
+    () =>
+      pipeQty * 550 +
+      premiumQty * 650 +
+      flavourUnits * 50 +
+      coalQty * 75 +
+      stoveQty * 200,
+    [pipeQty, premiumQty, flavourUnits, coalQty, stoveQty],
   );
-  const cart = pipeQty + flavourUnits + coalQty + stoveQty;
+  const cart = pipeQty + premiumQty + flavourUnits + coalQty + stoveQty;
   const collectionDay = date.split('T')[0] || '';
   const collectionTime = date.split('T')[1] || '';
   useEffect(() => {
@@ -344,7 +352,8 @@ export default function BookingFlow() {
     if (raw) {
       try {
         const draft = JSON.parse(raw);
-        setPipeQty(draft.pipeQty || 1);
+        setPipeQty(Math.max(0, Number(draft.pipeQty ?? 1)));
+        setPremiumQty(Math.max(0, Number(draft.premiumQty) || 0));
         setCoalQty(Math.max(0, Number(draft.coalQty) || 0));
         setStoveQty(Math.max(0, Number(draft.stoveQty) || 0));
         if (
@@ -393,6 +402,7 @@ export default function BookingFlow() {
         'chill-pipe-draft',
         JSON.stringify({
           pipeQty,
+          premiumQty,
           coalQty,
           stoveQty,
           flavourQuantities,
@@ -410,6 +420,7 @@ export default function BookingFlow() {
   }, [
     draftReady,
     pipeQty,
+    premiumQty,
     coalQty,
     stoveQty,
     flavourQuantities,
@@ -519,7 +530,12 @@ export default function BookingFlow() {
     localStorage.setItem(
       'chill-pipe-order',
       JSON.stringify({
-        quantities: { pipe: pipeQty, coal: coalQty, stove: stoveQty },
+        quantities: {
+          pipe: pipeQty,
+          premium: premiumQty,
+          coal: coalQty,
+          stove: stoveQty,
+        },
         selectedFlavours: flavours
           .filter((item) => (flavourQuantities[item.id] || 0) > 0)
           .map((item) => ({
@@ -650,18 +666,16 @@ export default function BookingFlow() {
                 <img src="/hookah-hero.webp" alt="Classic hookah" />
               </div>
               <h2>Classic hookah · R550</h2>
-              <p>2 hoses · 4 disposable mouthpieces · R400 deposit.</p>
-              <Quantity value={pipeQty} onChange={setPipeQty} />
+              <p>2 pipes · 4 disposable mouthpieces · R400 deposit.</p>
+              <Quantity value={pipeQty} onChange={setPipeQty} min={0} />
             </article>
-            <article className="flow-product muted-card">
+            <article className={premiumQty > 0 ? 'flow-product selected' : 'flow-product'}>
               <div className="product-photo">
                 <img src="/hookah-hero.webp" alt="Premium hookah" />
               </div>
-              <h2>Premium hookah</h2>
-              <p>2 hoses · 4 disposable mouthpieces · R600 deposit. Coming soon.</p>
-              <button aria-label="Premium hookah coming soon">
-                <ArrowRight />
-              </button>
+              <h2>Premium hookah · R650</h2>
+              <p>2 pipes · 4 disposable mouthpieces · R600 deposit.</p>
+              <Quantity value={premiumQty} onChange={setPremiumQty} min={0} />
             </article>
           </div>
           <div className="carousel-dots">

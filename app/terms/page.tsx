@@ -3,7 +3,7 @@ import AppDock from '../components/AppDock';
 const terms = [
   'Booking is confirmed once the final quoted amount, including the refundable security deposit, has been paid in full.',
   'A refundable security deposit of R400 applies to each Classic hookah and R600 applies to each Premium hookah.',
-  'Every hookah is supplied with two hoses and four disposable mouthpieces.',
+  'Every hookah is supplied with two pipes and four disposable mouthpieces.',
   'Equipment must be returned within 24 hours of the confirmed collection time, complete and in the same condition supplied.',
   'Consumables do not need to be returned.',
   'Costs for lost, damaged or broken equipment will be deducted from the security deposit.',

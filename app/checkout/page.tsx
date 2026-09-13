@@ -28,9 +28,15 @@ type Order = {
   };
   total: number;
 };
-const prices: Record<string, number> = { pipe: 550, coal: 75, stove: 200 };
+const prices: Record<string, number> = {
+  pipe: 550,
+  premium: 650,
+  coal: 75,
+  stove: 200,
+};
 const names: Record<string, string> = {
-  pipe: 'Hookah pipe',
+  pipe: 'Classic hookah',
+  premium: 'Premium hookah',
   coal: 'Coal box (36 pieces)',
   stove: 'Coal stove',
 };
@@ -100,6 +106,11 @@ export default function Checkout() {
   );
   const suggestedFlavours = order?.suggestedFlavours || [];
   const deliveryFee = order?.delivery ? order.deliveryFee ?? 350 : 0;
+  const hookahUnits =
+    (order?.quantities.pipe || 0) + (order?.quantities.premium || 0);
+  const deposit =
+    (order?.quantities.pipe || 0) * 400 +
+    (order?.quantities.premium || 0) * 600;
   if (!order)
     return (
       <main className="empty-cart">
@@ -129,7 +140,7 @@ export default function Checkout() {
           <div className="flow-head-actions">
             <span className="checkout-bag">
               <ShoppingBag />
-              <i>{(order.quantities.pipe || 0) + flavourUnits}</i>
+              <i>{hookahUnits + flavourUnits}</i>
             </span>
             <span>
               <Menu />
@@ -170,17 +181,17 @@ export default function Checkout() {
           ))}
           <div className="checkout-line">
             <span>
-              Hookah tongs × {order.quantities.pipe || 1}
+              Hookah tongs × {hookahUnits || 1}
             </span>
             <strong>Included</strong>
           </div>
           <div className="checkout-line">
-            <span>Hookah hoses × {(order.quantities.pipe || 1) * 2}</span>
+            <span>Hookah pipes × {(hookahUnits || 1) * 2}</span>
             <strong>Included</strong>
           </div>
           <div className="checkout-line">
             <span>
-              Disposable mouthpieces × {(order.quantities.pipe || 1) * 4}
+              Disposable mouthpieces × {(hookahUnits || 1) * 4}
             </span>
             <strong>Included</strong>
           </div>
@@ -211,7 +222,7 @@ export default function Checkout() {
           ) : null}
           <div className="checkout-line">
             <span>Refundable deposit</span>
-            <strong>{money((order.quantities.pipe || 0) * 400)}</strong>
+            <strong>{money(deposit)}</strong>
           </div>
           <div className="checkout-line">
             <span>
@@ -231,7 +242,7 @@ export default function Checkout() {
             <strong>
               {money(
                 order.total +
-                  (order.quantities.pipe || 0) * 400 +
+                  deposit +
                   deliveryFee,
               )}
             </strong>
