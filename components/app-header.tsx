@@ -123,11 +123,11 @@ export function AppHeader({ onBack }: { onBack?: () => void }) {
           <div className="header-panel-title"><h2>{panel === 'profile' ? 'Profile' : 'Menu'}</h2></div>
         {panel === 'profile' ? <div className="profile-panel-content">
           {editing ? <div className="profile-edit-form">
-            <label><span>Full name</span><input value={fullName} onChange={(event) => setFullName(event.target.value)} placeholder="Enter your full name" /></label>
-            <label><span>Contact number</span><input type="tel" value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="e.g. 076 850 5523" /></label>
-            <label><span>Email address</span><input type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="Enter your email address" /></label>
-            <label><span>Delivery address</span><textarea value={location} onChange={(event) => setLocation(event.target.value)} placeholder="Enter your delivery address" /></label>
-            <label><span>Alternative contact number <em>Optional</em></span><input type="tel" value={alternativePhone} onChange={(event) => setAlternativePhone(event.target.value)} placeholder="Enter another contact number" /></label>
+            <label><span>Full name</span><input autoComplete="name" value={fullName} onChange={(event) => setFullName(event.target.value)} placeholder="Enter your full name" /></label>
+            <label><span>Contact number</span><input type="tel" inputMode="tel" autoComplete="tel" value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="e.g. 076 850 5523" /></label>
+            <label><span>Email address</span><input type="email" inputMode="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="Enter your email address" /></label>
+            <label><span>Delivery address</span><textarea autoComplete="street-address" value={location} onChange={(event) => setLocation(event.target.value)} placeholder="Enter your delivery address" /></label>
+            <label><span>Alternative contact number <em>Optional</em></span><input type="tel" inputMode="tel" autoComplete="tel" value={alternativePhone} onChange={(event) => setAlternativePhone(event.target.value)} placeholder="Enter another contact number" /></label>
             <div><button onClick={() => setEditing(false)}>Cancel</button><button className="profile-save" onClick={saveProfile} disabled={!phone.trim()}><Check /> Save details</button></div>
           </div> : <>
             <section className="profile-contact-summary">

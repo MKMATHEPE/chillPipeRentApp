@@ -230,6 +230,8 @@
   display: grid;
   place-items: center;
 }
+.flow-quantity button:disabled{opacity:.32;cursor:not-allowed}
+.booking-row input[aria-invalid="true"],.booking-row select[aria-invalid="true"]{outline:2px solid #b42318;outline-offset:2px}
 .flow-quantity svg {
   width: 14px;
 }

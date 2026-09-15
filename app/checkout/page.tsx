@@ -4,6 +4,7 @@ import {
   Check,
   Home,
   LockKeyhole,
+  RotateCcw,
   ShoppingBag,
   Truck,
 } from 'lucide-react';
@@ -50,11 +51,20 @@ const rentalDate = (value: string) =>
 
 export default function Checkout() {
   const [order, setOrder] = useState<Order | null>(null);
+  const [hydrated, setHydrated] = useState(false);
   const [accepted, setAccepted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
   useEffect(() => {
     const raw = localStorage.getItem('chill-pipe-order');
-    if (raw) setOrder(JSON.parse(raw));
+    if (raw) {
+      try {
+        setOrder(JSON.parse(raw));
+      } catch {
+        localStorage.removeItem('chill-pipe-order');
+      }
+    }
+    setHydrated(true);
     const syncProfile = () => {
       const updated = localStorage.getItem('chill-pipe-order');
       if (updated) setOrder(JSON.parse(updated));
@@ -65,6 +75,7 @@ export default function Checkout() {
   async function placeOrder() {
     if (!order || submitting) return;
     setSubmitting(true);
+    setSubmitError('');
     try {
       const response = await fetch('/api/bookings', {
         method: 'POST',
@@ -83,7 +94,7 @@ export default function Checkout() {
       );
       window.location.href = `/track?reference=${encodeURIComponent(booking.reference)}&phone=${encodeURIComponent(order.customer.phone)}`;
     } catch (error) {
-      alert(
+      setSubmitError(
         error instanceof Error ? error.message : 'Could not create booking.',
       );
       setSubmitting(false);
@@ -117,6 +128,13 @@ export default function Checkout() {
   const deposit =
     (order?.quantities.pipe || 0) * 400 +
     (order?.quantities.premium || 0) * 650;
+  if (!hydrated)
+    return (
+      <main className="empty-cart checkout-loading" aria-busy="true">
+        <span className="checkout-loading-mark" />
+        <p className="eyebrow">Loading your session…</p>
+      </main>
+    );
   if (!order)
     return (
       <main className="empty-cart">
@@ -295,6 +313,14 @@ export default function Checkout() {
           <ShoppingBag />
           {submitting ? 'Processing checkout…' : 'Checkout'}
         </button>
+        {submitError ? (
+          <div className="checkout-submit-error" role="alert">
+            <span>{submitError}</span>
+            <button type="button" onClick={placeOrder} disabled={submitting}>
+              <RotateCcw /> Try again
+            </button>
+          </div>
+        ) : null}
         <p className="checkout-flow-note">
           Availability and delivery pricing are confirmed before payment.
         </p>

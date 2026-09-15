@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowRight,
   Check,
@@ -171,6 +171,7 @@ function Quantity({
       <span>{value}</span>
       <button
         aria-label="Increase quantity"
+        disabled={value >= 10}
         onClick={() => onChange(Math.min(10, value + 1))}
       >
         <Plus />
@@ -262,10 +263,7 @@ export default function BookingFlow() {
   const [stoveQty, setStoveQty] = useState(0);
   const [flavourQuantities, setFlavourQuantities] = useState<
     Record<string, number>
-  >({
-    lady: 1,
-    gum: 1,
-  });
+  >({});
   const [showSuggestion, setShowSuggestion] = useState(false);
   const [suggestions, setSuggestions] = useState<SuggestedFlavour[]>([]);
   const [suggestionName, setSuggestionName] = useState('');
@@ -287,8 +285,14 @@ export default function BookingFlow() {
   });
   const [showDeliveryDetails, setShowDeliveryDetails] = useState(false);
   const [validationMessage, setValidationMessage] = useState('');
+  const [invalidFields, setInvalidFields] = useState<string[]>([]);
   const [date, setDate] = useState('');
   const [draftReady, setDraftReady] = useState(false);
+  const phoneInputRef = useRef<HTMLInputElement>(null);
+  const addressInputRef = useRef<HTMLInputElement>(null);
+  const suburbInputRef = useRef<HTMLInputElement>(null);
+  const dateInputRef = useRef<HTMLInputElement>(null);
+  const timeInputRef = useRef<HTMLSelectElement>(null);
   const flavourUnits = Object.values(flavourQuantities).reduce(
     (sum, quantity) => sum + quantity,
     0,
@@ -470,17 +474,35 @@ export default function BookingFlow() {
       date.includes('T') &&
       collectionTimeSlots.includes(date.split('T')[1]) &&
       bookingDate.getTime() > Date.now();
-    const missing = [
-      !phone.trim() ? 'contact number' : '',
-      !address.trim() ? 'delivery address' : '',
-      delivery && !suburb.trim() ? 'area or suburb' : '',
-      !validTime ? 'valid rental date and time' : '',
+    const missingFields = [
+      !phone.trim() ? 'phone' : '',
+      !address.trim() ? 'address' : '',
+      delivery && !suburb.trim() ? 'suburb' : '',
+      !validTime ? 'date' : '',
     ].filter(Boolean);
+    const missing = missingFields.map((field) =>
+      field === 'phone'
+        ? 'contact number'
+        : field === 'address'
+          ? 'delivery address'
+          : field === 'suburb'
+            ? 'area or suburb'
+            : 'valid rental date and time',
+    );
     if (missing.length) {
+      setInvalidFields(missingFields);
       setValidationMessage(`Please add your ${missing.join(', ')}.`);
       if (!address.trim() || (delivery && !suburb.trim()))
         setShowDeliveryDetails(true);
       navigateStep('delivery');
+      window.setTimeout(() => {
+        const first = missingFields[0];
+        if (first === 'phone') phoneInputRef.current?.focus();
+        else if (first === 'address') addressInputRef.current?.focus();
+        else if (first === 'suburb') suburbInputRef.current?.focus();
+        else if (!collectionDay) dateInputRef.current?.focus();
+        else timeInputRef.current?.focus();
+      }, 50);
       return;
     }
     let confirmedQuote = deliveryQuote;
@@ -500,6 +522,7 @@ export default function BookingFlow() {
       confirmedQuote = calculated;
     }
     setValidationMessage('');
+    setInvalidFields([]);
     localStorage.setItem(
       'chill-pipe-order',
       JSON.stringify({
@@ -922,6 +945,7 @@ export default function BookingFlow() {
               setAddress(deliveryAddress);
               setDeliveryQuote({ status: 'idle' });
               setValidationMessage('');
+              setInvalidFields([]);
             }}
           />
           <DeliveryOption
@@ -933,6 +957,8 @@ export default function BookingFlow() {
               if (delivery) setDeliveryAddress(address);
               setDelivery(false);
               setAddress(COLLECTION_LOCATION);
+              setValidationMessage('');
+              setInvalidFields([]);
             }}
           />
         </div>
@@ -943,8 +969,16 @@ export default function BookingFlow() {
             <input
               required
               type="tel"
+              inputMode="tel"
+              autoComplete="tel"
+              ref={phoneInputRef}
+              aria-invalid={invalidFields.includes('phone')}
               value={phone}
-              onChange={(e) => setPhone(e.target.value)}
+              onChange={(e) => {
+                setPhone(e.target.value);
+                setInvalidFields((current) => current.filter((field) => field !== 'phone'));
+                setValidationMessage('');
+              }}
               placeholder="071 234 5678"
             />
           </span>
@@ -978,6 +1012,9 @@ export default function BookingFlow() {
                     <span className="booking-input-action">
                       <input
                         required
+                        ref={addressInputRef}
+                        autoComplete="street-address"
+                        aria-invalid={invalidFields.includes('address')}
                         value={address}
                         onChange={(e) => {
                           setAddress(e.target.value);
@@ -985,6 +1022,7 @@ export default function BookingFlow() {
                           setLocationPinned(false);
                           setDeliveryQuote({ status: 'idle' });
                           setValidationMessage('');
+                          setInvalidFields((current) => current.filter((field) => field !== 'address'));
                         }}
                         placeholder="Street name and number"
                       />
@@ -1029,12 +1067,16 @@ export default function BookingFlow() {
                     Area / suburb
                     <input
                       required
+                      ref={suburbInputRef}
+                      autoComplete="address-level2"
+                      aria-invalid={invalidFields.includes('suburb')}
                       value={suburb}
                       onChange={(e) => {
                         setSuburb(e.target.value);
                         setLocationPinned(false);
                         setDeliveryQuote({ status: 'idle' });
                         setValidationMessage('');
+                        setInvalidFields((current) => current.filter((field) => field !== 'suburb'));
                       }}
                       placeholder="e.g. Midrand"
                     />
@@ -1101,10 +1143,16 @@ export default function BookingFlow() {
                   Delivery date
                   <input
                     required
+                    ref={dateInputRef}
+                    aria-invalid={invalidFields.includes('date')}
                     min={localDateValue()}
                     type="date"
                     value={collectionDay}
-                    onChange={(e) => setDate(e.target.value)}
+                    onChange={(e) => {
+                      setDate(e.target.value);
+                      setInvalidFields((current) => current.filter((field) => field !== 'date'));
+                      setValidationMessage('');
+                    }}
                   />
                 </span>
               </label>
@@ -1114,14 +1162,18 @@ export default function BookingFlow() {
                   Delivery time
                   <select
                     required
+                    ref={timeInputRef}
+                    aria-invalid={invalidFields.includes('date')}
                     value={collectionTime}
-                    onChange={(e) =>
+                    onChange={(e) => {
                       setDate(
                         collectionDay
                           ? `${collectionDay}T${e.target.value}`
                           : '',
-                      )
-                    }
+                      );
+                      setInvalidFields((current) => current.filter((field) => field !== 'date'));
+                      setValidationMessage('');
+                    }}
                   >
                     <option value="">Select a time</option>
                     {collectionTimeSlots.map((time) => {
@@ -1173,6 +1225,8 @@ export default function BookingFlow() {
                   Collection date
                   <input
                     required
+                    ref={dateInputRef}
+                    aria-invalid={invalidFields.includes('date')}
                     min={localDateValue()}
                     type="date"
                     value={collectionDay}
@@ -1186,6 +1240,8 @@ export default function BookingFlow() {
                           ? nextDate
                           : nextDay,
                       );
+                      setInvalidFields((current) => current.filter((field) => field !== 'date'));
+                      setValidationMessage('');
                     }}
                   />
                 </span>
@@ -1196,14 +1252,18 @@ export default function BookingFlow() {
                   Collection time
                   <select
                     required
+                    ref={timeInputRef}
+                    aria-invalid={invalidFields.includes('date')}
                     value={collectionTime}
-                    onChange={(e) =>
+                    onChange={(e) => {
                       setDate(
                         collectionDay
                           ? `${collectionDay}T${e.target.value}`
                           : '',
-                      )
-                    }
+                      );
+                      setInvalidFields((current) => current.filter((field) => field !== 'date'));
+                      setValidationMessage('');
+                    }}
                   >
                     <option value="">Select a time</option>
                     {collectionTimeSlots.map((time) => {
