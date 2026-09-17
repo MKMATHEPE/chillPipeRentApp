@@ -1,0 +1,161 @@
+.tracking-flow .tracking-photo-head {
+  height: 260px;
+}
+.tracking-flow .tracking-sheet {
+  padding-bottom: 30px;
+  min-height: 520px;
+}
+.tracking-sheet > h1 {
+  font-size: clamp(32px, 8vw, 42px);
+  line-height: 1.08;
+  margin: 14px 0 12px;
+}
+.tracking-sheet > p {
+  line-height: 1.5;
+  margin-bottom: 22px;
+}
+.tracking-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border-radius: 999px;
+  background: #e9e7e3;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.tracking-flow .status-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 0;
+  margin-top: 22px;
+}
+.tracking-flow .status-card {
+  order: -1;
+  width: 100%;
+  border-radius: 20px;
+  padding: 20px;
+  background: #111;
+}
+.tracking-flow .status-card > div {
+  font-size: 14px;
+  line-height: 1.5;
+  gap: 14px;
+}
+.tracking-flow .status-card > div > strong {
+  max-width: 60%;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+.tracking-flow .tracking-summary-title {
+  align-items: center;
+  border: 0;
+  padding: 0 0 12px;
+}
+.tracking-summary-title > strong {
+  font:
+    400 22px Georgia,
+    serif;
+}
+.tracking-summary-title > span {
+  font-size: 12px;
+  letter-spacing: 0.03em;
+}
+.tracking-flow .status-total strong {
+  font-size: 30px;
+  white-space: nowrap;
+}
+.tracking-flow .status-timeline {
+  border: 0;
+  width: 100%;
+}
+.tracking-flow .status-timeline h2 {
+  font:
+    400 26px Georgia,
+    serif;
+  margin: 0 0 12px;
+}
+.tracking-flow .timeline-row {
+  grid-template-columns: 34px 1fr;
+  gap: 12px;
+  padding: 13px 0;
+  opacity: 1;
+  color: #777;
+}
+.tracking-flow .timeline-row > span {
+  width: 34px;
+  height: 34px;
+  background: #e8e6e2;
+  border: 0;
+}
+.tracking-flow .timeline-row.active {
+  color: #111;
+}
+.tracking-flow .timeline-row.active > span {
+  background: #111;
+  color: #fff;
+}
+.tracking-flow .timeline-row strong {
+  font:
+    600 14px var(--font-geist-sans),
+    sans-serif;
+}
+.tracking-flow .timeline-row p {
+  font-size: 13px;
+  line-height: 1.5;
+  margin-top: 4px;
+}
+.tracking-flow .status-cta {
+  border-radius: 999px;
+  font-size: 14px;
+  letter-spacing: 0;
+  text-transform: none;
+  min-height: 52px;
+}
+.tracking-flow .status-refresh {
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 14px;
+}
+.tracking-flow button:disabled {
+  opacity: 0.5;
+}
+.tracking-lookup label {
+  display: block;
+  font-size: 14px;
+  margin: 20px 0;
+}
+.tracking-lookup input {
+  display: block;
+  width: 100%;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid #bbb;
+  padding: 14px 0;
+  font-size: 16px;
+}
+.tracking-lookup > button {
+  width: 100%;
+  border-radius: 999px;
+  border: 0;
+  background: #111;
+  color: #fff;
+  padding: 17px;
+  margin-top: 12px;
+}
+.tracking-flow .lookup-error {
+  border-radius: 12px;
+  font-size: 14px;
+}
+@media (max-width: 360px) {
+  .tracking-flow .status-card {
+    padding: 16px;
+  }
+  .tracking-summary-title > span {
+    font-size: 11px;
+  }
+}
