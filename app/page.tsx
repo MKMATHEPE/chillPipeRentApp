@@ -668,7 +668,7 @@ export default function BookingFlow() {
                 <img src="/hookah-hero.webp" alt="Classic hookah" />
               </div>
               <h2>Classic hookah · 2 pipes · R550</h2>
-              <p>1 flavour · 8 coconut coals · 4 disposable mouthpieces · Tongs · R400 deposit.</p>
+              <p>1 flavour · 8 coconut coals · 4 disposable mouthpieces · Tongs.</p>
               <Quantity value={pipeQty} onChange={setPipeQty} min={0} />
             </article>
             <article className={premiumQty > 0 ? 'flow-product selected' : 'flow-product'}>
@@ -676,7 +676,7 @@ export default function BookingFlow() {
                 <img src="/hookah-hero.webp" alt="Premium hookah" />
               </div>
               <h2>Premium hookah · 2 pipes · R800</h2>
-              <p>1 flavour · 8 coconut coals · 4 disposable mouthpieces · Tongs · R650 deposit.</p>
+              <p>1 flavour · 8 coconut coals · 4 disposable mouthpieces · Tongs.</p>
               <Quantity value={premiumQty} onChange={setPremiumQty} min={0} />
             </article>
           </div>

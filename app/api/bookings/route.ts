@@ -33,7 +33,8 @@ export async function POST(request: Request) {
     const deliveryFee = body.delivery ? Number(body.deliveryFee) : 0;
     if (body.delivery && deliveryFee !== 250 && deliveryFee !== 350)
       return json({ error: 'Calculate the delivery fee before checkout.' }, 400);
-    const deposit = pipeQty * 400 + premiumQty * 650;
+    // Retain the column for historical records; new rentals require no deposit.
+    const deposit = 0;
     const now = Date.now();
     await getDb()
       .prepare(

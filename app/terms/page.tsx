@@ -1,18 +1,16 @@
 import AppDock from '../components/AppDock';
 
 const terms = [
-  'Booking is confirmed once the final quoted amount, including the refundable security deposit, has been paid in full.',
-  'A refundable security deposit of R400 applies to each Classic hookah and R650 applies to each Premium hookah.',
+  'Booking is confirmed once the final quoted amount has been paid in full.',
   'Every hookah is supplied with two pipes, four disposable mouthpieces, one flavour unit and eight coconut coals.',
   'Additional flavour units cost R50 each, and an additional pack of eight coconut coals costs R30.',
   'Equipment must be returned within 24 hours of the confirmed collection time, complete and in the same condition supplied.',
   'Consumables do not need to be returned.',
-  'Costs for lost, damaged or broken equipment will be deducted from the security deposit.',
-  'The remaining deposit balance will be refunded within 24–48 hours after the returned equipment has been inspected and found to be in good condition.',
+  'The client is responsible for repair or replacement costs for lost, damaged or broken equipment.',
   'The standard delivery and equipment collection fee is R350. A reduced R250 fee applies when the confirmed address is within a 15 km radius. Customer collection from Vorna Valley is included.',
   'Cancellations made at least 48 hours before the booking time receive a full refund. Later cancellations incur a 20% cancellation fee, with 80% of the amount paid refunded.',
   'For collection bookings, R25 is charged for every 30 minutes after the confirmed collection time.',
-  'A missed collection is cancelled after 12 hours or at 23:59 on the collection date, whichever comes first. The security deposit is refunded in full, and 35% of the rental payment is refunded.',
+  'A missed collection is cancelled after 12 hours or at 23:59 on the collection date, whichever comes first. 35% of the rental payment is refunded.',
   'Late returns may result in an additional daily rental charge.',
   'The client must use the equipment safely and according to the instructions provided.',
   'Equipment may only be operated by persons aged 18 or older. A valid government-issued photo ID is required.',

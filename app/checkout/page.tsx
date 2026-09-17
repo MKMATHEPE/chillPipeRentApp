@@ -125,9 +125,6 @@ export default function Checkout() {
   const hookahUnits =
     (order?.quantities.pipe || 0) + (order?.quantities.premium || 0);
   const additionalFlavourUnits = Math.max(0, flavourUnits - hookahUnits);
-  const deposit =
-    (order?.quantities.pipe || 0) * 400 +
-    (order?.quantities.premium || 0) * 650;
   if (!hydrated)
     return (
       <main className="empty-cart checkout-loading" aria-busy="true">
@@ -232,10 +229,6 @@ export default function Checkout() {
             </div>
           ) : null}
           <div className="checkout-line">
-            <span>Refundable deposit</span>
-            <strong>{money(deposit)}</strong>
-          </div>
-          <div className="checkout-line">
             <span>
               {order.delivery ? 'Delivery & collection' : 'Customer collection'}
             </span>
@@ -253,7 +246,6 @@ export default function Checkout() {
             <strong>
               {money(
                 order.total +
-                  deposit +
                   deliveryFee,
               )}
             </strong>
