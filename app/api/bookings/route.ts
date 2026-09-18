@@ -1,4 +1,5 @@
 import { getDb } from '../../../db';
+import { isPaymentMethod } from '@/lib/payment-methods';
 
 const json = (data: unknown, status = 200) => Response.json(data, { status });
 const clean = (value: unknown, max = 200) =>
@@ -8,6 +9,8 @@ const clean = (value: unknown, max = 200) =>
 export async function POST(request: Request) {
   try {
     const body = (await request.json()) as Record<string, any>;
+    if (!isPaymentMethod(body.paymentMethod))
+      return json({ error: 'Choose a payment method before checkout.' }, 400);
     const customer = body.customer || {};
     const name = clean(customer.name, 100),
       phone = clean(customer.phone, 40),
@@ -38,7 +41,7 @@ export async function POST(request: Request) {
     const now = Date.now();
     await getDb()
       .prepare(
-        `INSERT INTO bookings (reference,customer_name,phone,rental_date,location,notes,order_json,rental_total,deposit,delivery_fee,status,payment_method,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,'awaiting_review',NULL,?,?)`,
+        `INSERT INTO bookings (reference,customer_name,phone,rental_date,location,notes,order_json,rental_total,deposit,delivery_fee,status,payment_method,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,'awaiting_review',?,?,?)`,
       )
       .bind(
         reference,
@@ -57,6 +60,7 @@ export async function POST(request: Request) {
         total,
         deposit,
         deliveryFee,
+        body.paymentMethod,
         now,
         now,
       )
@@ -65,6 +69,7 @@ export async function POST(request: Request) {
       {
         reference,
         status: 'awaiting_review',
+        paymentMethod: body.paymentMethod,
         total,
         deposit,
         deliveryFee,

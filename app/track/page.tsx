@@ -13,7 +13,10 @@ import {
 } from 'lucide-react';
 import { AppHeader } from '@/components/app-header';
 import './tracking.css';
+import { paymentLabel, payOnArrival } from '@/lib/payment-methods';
 type Booking = {
+  paymentMethod?: string | null;
+  delivery?: boolean;
   reference: string;
   status: string;
   total: number;
@@ -255,7 +258,11 @@ export default function Track() {
                 )}
               </strong>
             </div>
-            {booking.status === 'approved' && (
+            <div><span>Payment method</span><strong>{paymentLabel(booking.paymentMethod)}</strong></div>
+            {booking.status === 'approved' && payOnArrival(booking.paymentMethod) && (
+              <p>Pay the full total {booking.delivery ? 'on delivery' : 'when collecting'}.</p>
+            )}
+            {booking.status === 'approved' && !payOnArrival(booking.paymentMethod) && (
               <a
                 className="status-cta"
                 href={`/payment?reference=${encodeURIComponent(booking.reference)}&phone=${encodeURIComponent(phone)}`}

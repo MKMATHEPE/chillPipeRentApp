@@ -1,5 +1,219 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { CheckCircle2, ClipboardList, RotateCcw, Truck } from 'lucide-react';
-type Booking={reference:string;status:string;total:number;deposit:number;deliveryFee:number|null;customer:{name:string;phone:string;date:string;location:string};quantities:Record<string,number>};const money=(n:number)=>`R${n.toLocaleString('en-ZA')}`;const actions:Record<string,{next:string;label:string}>={approved:{next:'paid',label:'Verify payment'},payment_review:{next:'paid',label:'Verify EFT payment'},paid:{next:'handed_over',label:'Mark as handed over'},handed_over:{next:'returned',label:'Mark as returned'},returned:{next:'complete',label:'Complete inspection'}};const labels:Record<string,string>={awaiting_review:'Needs review',approved:'Awaiting payment',payment_review:'Payment submitted',paid:'Paid & confirmed',handed_over:'Rental active',returned:'Inspect return',complete:'Completed',cancelled:'Cancelled'};
-export default function Admin(){const [bookings,setBookings]=useState<Booking[]>([]);const [selected,setSelected]=useState('');const [fee,setFee]=useState('');const [error,setError]=useState('');const booking=bookings.find(item=>item.reference===selected)||bookings[0]||null;async function load(){const response=await fetch('/api/admin/bookings',{cache:'no-store'});const data=await response.json();if(!response.ok){setError(data.error||'Unable to load bookings.');return}setBookings(data.bookings);setSelected(current=>current||data.bookings[0]?.reference||'');}useEffect(()=>{void load()},[]);async function update(status:string,deliveryFee?:number){if(!booking)return;const response=await fetch('/api/admin/bookings',{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({reference:booking.reference,status,deliveryFee})});if(!response.ok){const data=await response.json();setError(data.error||'Update failed.');return}await load()}function approve(){void update('approved',Number(fee||0))}return <main className="admin-app"><aside className="admin-nav"><img src="/chill-pipe-logo.webp" alt="The Chill Pipe"/><a className="active"><ClipboardList/>Bookings</a><a><Truck/>Fulfilment</a><a><RotateCcw/>Returns</a></aside><section className="admin-main"><div className="admin-head"><div><p className="eyebrow">Operations</p><h1>Booking requests</h1></div><span>{bookings.length} bookings</span></div>{error&&<div className="admin-error" role="alert">{error}</div>}{bookings.length>0&&<div className="admin-picker">{bookings.map(item=><button key={item.reference} className={booking?.reference===item.reference?'active':''} onClick={()=>{setSelected(item.reference);setFee(item.deliveryFee?.toString()||'')}}><strong>{item.reference}</strong><span>{item.customer.name}</span><i>{labels[item.status]||item.status}</i></button>)}</div>}{booking?<article className="admin-booking"><div className="admin-booking-head"><div><p>{booking.reference}</p><h2>{booking.customer.name}</h2><span>{booking.customer.phone} · {booking.customer.date} · {booking.customer.location}</span></div><b>{labels[booking.status]||booking.status}</b></div><div className="admin-metrics"><div><span>Rental</span><strong>{money(booking.total)}</strong></div>{booking.deposit>0&&<div><span>Deposit</span><strong>{money(booking.deposit)}</strong></div>}<div><span>Hookahs</span><strong>{(booking.quantities.pipe||0)+(booking.quantities.premium||0)}</strong></div><div><span>Final total</span><strong>{money(booking.total+booking.deposit+(booking.deliveryFee||0))}</strong></div></div>{booking.status==='awaiting_review'?<><label className="delivery-fee"><span>Delivery & collection fee</span><div><b>R</b><input type="number" min="0" value={fee} onChange={e=>setFee(e.target.value)} placeholder="Enter amount"/></div></label><button onClick={approve}><CheckCircle2/>Approve final quote</button></>:actions[booking.status]?<button onClick={()=>void update(actions[booking.status].next)}><CheckCircle2/>{booking.status==='returned'&&booking.deposit>0?'Approve deposit refund':actions[booking.status].label}</button>:<div className="admin-complete"><CheckCircle2/>{booking.status==='complete'?(booking.deposit>0?'Rental completed and refund approved.':'Rental completed and inspected.'):'No further action required.'}</div>}</article>:!error&&<div className="admin-empty"><ClipboardList size={36}/><h2>No rental requests yet</h2><p>New customer bookings will appear here.</p></div>}</section></main>}
+import { paymentLabel, payOnArrival } from '@/lib/payment-methods';
+type Booking = {
+  paymentMethod?: string | null;
+  reference: string;
+  status: string;
+  total: number;
+  deposit: number;
+  deliveryFee: number | null;
+  customer: { name: string; phone: string; date: string; location: string };
+  quantities: Record<string, number>;
+};
+const money = (n: number) => `R${n.toLocaleString('en-ZA')}`;
+const actions: Record<string, { next: string; label: string }> = {
+  approved: { next: 'paid', label: 'Verify payment' },
+  payment_review: { next: 'paid', label: 'Verify EFT payment' },
+  paid: { next: 'handed_over', label: 'Mark as handed over' },
+  handed_over: { next: 'returned', label: 'Mark as returned' },
+  returned: { next: 'complete', label: 'Complete inspection' },
+};
+const labels: Record<string, string> = {
+  awaiting_review: 'Needs review',
+  approved: 'Awaiting payment',
+  payment_review: 'Payment submitted',
+  paid: 'Paid & confirmed',
+  handed_over: 'Rental active',
+  returned: 'Inspect return',
+  complete: 'Completed',
+  cancelled: 'Cancelled',
+};
+export default function Admin() {
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [selected, setSelected] = useState('');
+  const [fee, setFee] = useState('');
+  const [error, setError] = useState('');
+  const booking =
+    bookings.find((item) => item.reference === selected) || bookings[0] || null;
+  async function load() {
+    const response = await fetch('/api/admin/bookings', { cache: 'no-store' });
+    const data = await response.json();
+    if (!response.ok) {
+      setError(data.error || 'Unable to load bookings.');
+      return;
+    }
+    setBookings(data.bookings);
+    setSelected((current) => current || data.bookings[0]?.reference || '');
+  }
+  useEffect(() => {
+    void load();
+  }, []);
+  async function update(status: string, deliveryFee?: number) {
+    if (!booking) return;
+    const response = await fetch('/api/admin/bookings', {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        reference: booking.reference,
+        status,
+        deliveryFee,
+      }),
+    });
+    if (!response.ok) {
+      const data = await response.json();
+      setError(data.error || 'Update failed.');
+      return;
+    }
+    await load();
+  }
+  function approve() {
+    void update('approved', Number(fee || 0));
+  }
+  return (
+    <main className="admin-app">
+      <aside className="admin-nav">
+        <img src="/chill-pipe-logo.webp" alt="The Chill Pipe" />
+        <a className="active">
+          <ClipboardList />
+          Bookings
+        </a>
+        <a>
+          <Truck />
+          Fulfilment
+        </a>
+        <a>
+          <RotateCcw />
+          Returns
+        </a>
+      </aside>
+      <section className="admin-main">
+        <div className="admin-head">
+          <div>
+            <p className="eyebrow">Operations</p>
+            <h1>Booking requests</h1>
+          </div>
+          <span>{bookings.length} bookings</span>
+        </div>
+        {error && (
+          <div className="admin-error" role="alert">
+            {error}
+          </div>
+        )}
+        {bookings.length > 0 && (
+          <div className="admin-picker">
+            {bookings.map((item) => (
+              <button
+                key={item.reference}
+                className={
+                  booking?.reference === item.reference ? 'active' : ''
+                }
+                onClick={() => {
+                  setSelected(item.reference);
+                  setFee(item.deliveryFee?.toString() || '');
+                }}
+              >
+                <strong>{item.reference}</strong>
+                <span>{item.customer.name}</span>
+                <i>{labels[item.status] || item.status}</i>
+              </button>
+            ))}
+          </div>
+        )}
+        {booking ? (
+          <article className="admin-booking">
+            <div className="admin-booking-head">
+              <div>
+                <p>{booking.reference}</p>
+                <h2>{booking.customer.name}</h2>
+                <span>
+                  {booking.customer.phone} · {booking.customer.date} ·{' '}
+                  {booking.customer.location}
+                </span>
+              </div>
+              <b>{labels[booking.status] || booking.status}</b>
+            </div>
+            <div className="admin-metrics">
+              <div>
+                <span>Rental</span>
+                <strong>{money(booking.total)}</strong>
+              </div>
+              {booking.deposit > 0 && (
+                <div>
+                  <span>Deposit</span>
+                  <strong>{money(booking.deposit)}</strong>
+                </div>
+              )}
+              <div>
+                <span>Hookahs</span>
+                <strong>
+                  {(booking.quantities.pipe || 0) +
+                    (booking.quantities.premium || 0)}
+                </strong>
+              </div>
+              <div>
+                <span>Final total</span>
+                <strong>
+                  {money(
+                    booking.total +
+                      booking.deposit +
+                      (booking.deliveryFee || 0),
+                  )}
+                </strong>
+              </div>
+            </div>
+            <p><strong>Payment method:</strong> {paymentLabel(booking.paymentMethod)}</p>
+            {booking.status === 'awaiting_review' ? (
+              <>
+                <label className="delivery-fee">
+                  <span>Delivery & collection fee</span>
+                  <div>
+                    <b>R</b>
+                    <input
+                      type="number"
+                      min="0"
+                      value={fee}
+                      onChange={(e) => setFee(e.target.value)}
+                      placeholder="Enter amount"
+                    />
+                  </div>
+                </label>
+                <button onClick={approve}>
+                  <CheckCircle2 />
+                  Approve final quote
+                </button>
+              </>
+            ) : actions[booking.status] ? (
+              <button onClick={() => void update(actions[booking.status].next)}>
+                <CheckCircle2 />
+                {booking.status === 'returned' && booking.deposit > 0
+                  ? 'Approve deposit refund'
+                  : booking.status === 'approved' && payOnArrival(booking.paymentMethod)
+                    ? 'Confirm payment received'
+                    : actions[booking.status].label}
+              </button>
+            ) : (
+              <div className="admin-complete">
+                <CheckCircle2 />
+                {booking.status === 'complete'
+                  ? booking.deposit > 0
+                    ? 'Rental completed and refund approved.'
+                    : 'Rental completed and inspected.'
+                  : 'No further action required.'}
+              </div>
+            )}
+          </article>
+        ) : (
+          !error && (
+            <div className="admin-empty">
+              <ClipboardList size={36} />
+              <h2>No rental requests yet</h2>
+              <p>New customer bookings will appear here.</p>
+            </div>
+          )
+        )}
+      </section>
+    </main>
+  );
+}

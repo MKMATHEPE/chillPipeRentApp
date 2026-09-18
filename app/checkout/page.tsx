@@ -9,10 +9,12 @@ import {
   Truck,
 } from 'lucide-react';
 import { AppHeader } from '@/components/app-header';
+import { isPaymentMethod, paymentMethods, payOnArrival, type PaymentMethod } from '@/lib/payment-methods';
 
 type FlavourItem = string | { name: string; quantity: number };
 type SuggestedFlavour = { name: string; details: string; quantity: number };
 type Order = {
+  paymentMethod?: PaymentMethod;
   quantities: Record<string, number>;
   selectedFlavours: FlavourItem[];
   suggestedFlavours?: SuggestedFlavour[];
@@ -73,7 +75,7 @@ export default function Checkout() {
     return () => window.removeEventListener('chill-pipe-profile-updated', syncProfile);
   }, []);
   async function placeOrder() {
-    if (!order || submitting) return;
+    if (!order || submitting || !accepted || !isPaymentMethod(order.paymentMethod)) return;
     setSubmitting(true);
     setSubmitError('');
     try {
@@ -143,6 +145,7 @@ export default function Checkout() {
     );
   const ready =
     accepted &&
+    isPaymentMethod(order.paymentMethod) &&
     Boolean(
       order.customer.phone && order.customer.date && order.customer.location,
     );
@@ -242,7 +245,7 @@ export default function Checkout() {
             </p>
           ) : null}
           <div className="checkout-total">
-            <span>Due after approval</span>
+            <span>{payOnArrival(order.paymentMethod) ? (order.delivery ? 'Due on delivery' : 'Due on collection') : 'Due after approval'}</span>
             <strong>
               {money(
                 order.total +
@@ -282,6 +285,22 @@ export default function Checkout() {
             <Check />
           </div>
         </section>
+        <fieldset className="checkout-payment-methods" disabled={submitting}>
+          <legend>Payment method</legend>
+          {Object.entries(paymentMethods).map(([value, label]) => (
+            <label key={value}>
+              <input type="radio" name="paymentMethod" value={value}
+                checked={order.paymentMethod === value}
+                onChange={() => {
+                  const updated = { ...order, paymentMethod: value as PaymentMethod };
+                  setOrder(updated);
+                  try { localStorage.setItem('chill-pipe-order', JSON.stringify(updated)); } catch { /* Selection remains in memory if storage is unavailable. */ }
+                }} />
+              <span>{label}</span>
+            </label>
+          ))}
+          {payOnArrival(order.paymentMethod) && <p>{order.delivery ? 'Pay the full total, including delivery, on arrival.' : 'Pay the full total when collecting.'}</p>}
+        </fieldset>
         <label className="checkout-flow-accept">
           <input
             type="checkbox"
