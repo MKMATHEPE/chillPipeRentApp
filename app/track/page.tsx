@@ -41,7 +41,7 @@ export default function Track() {
   const [booking, setBooking] = useState<Booking | null>(null);
   const [reference, setReference] = useState('');
   const [phone, setPhone] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   async function load(ref = reference, tel = phone) {
     if (!ref || !tel) return;
@@ -57,10 +57,10 @@ export default function Track() {
       setBooking(data);
       setReference(ref);
       setPhone(tel);
-      localStorage.setItem(
+      try { localStorage.setItem(
         'chill-pipe-booking-access',
         JSON.stringify({ reference: ref, phone: tel }),
-      );
+      ); } catch { /* A successful lookup does not require browser storage. */ }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Booking not found.');
     } finally {
@@ -69,14 +69,30 @@ export default function Track() {
   }
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const raw = localStorage.getItem('chill-pipe-booking-access');
-    const saved = raw ? JSON.parse(raw) : {};
+    let saved: { reference?: string; phone?: string } = {};
+    try {
+      const raw = localStorage.getItem('chill-pipe-booking-access');
+      const parsed = raw ? JSON.parse(raw) : null;
+      if (parsed && typeof parsed === 'object') saved = parsed;
+    } catch { /* URL access still works if saved data is unavailable. */ }
     const ref = params.get('reference') || saved.reference || '';
     const tel = params.get('phone') || saved.phone || '';
     setReference(ref);
     setPhone(tel);
     if (ref && tel) void load(ref, tel);
+    else setLoading(false);
   }, []);
+  if (!booking && loading)
+    return (
+      <main className="flow-app tracking-flow">
+        <TrackingHeader />
+        <section className="flow-sheet tracking-sheet" aria-busy="true">
+          <div className="sheet-handle" />
+          <h1 role="status">Loading your booking…</h1>
+        </section>
+        <TrackingNav />
+      </main>
+    );
   if (!booking)
     return (
       <main className="flow-app tracking-flow">
