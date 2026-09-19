@@ -267,6 +267,22 @@ export default function Checkout() {
               <strong>{order.customer.location}</strong>
             </div>
           </div>
+          <fieldset className="checkout-payment-methods" disabled={submitting}>
+            <legend>Payment type</legend>
+            {Object.entries(paymentMethods).map(([value, label]) => (
+              <label key={value}>
+                <input type="radio" name="paymentMethod" value={value}
+                  checked={order.paymentMethod === value}
+                  onChange={() => {
+                    const updated = { ...order, paymentMethod: value as PaymentMethod };
+                    setOrder(updated);
+                    try { localStorage.setItem('chill-pipe-order', JSON.stringify(updated)); } catch { /* Keep selection in memory. */ }
+                  }} />
+                <span>{label}</span>
+              </label>
+            ))}
+            {payOnArrival(order.paymentMethod) && <p>{order.delivery ? 'Pay the full total, including delivery, on arrival.' : 'Pay the full total when collecting.'}</p>}
+          </fieldset>
           <div className="checkout-session-fulfilment">
             <span>{order.delivery ? <Truck /> : <Home />}</span>
             <div>
@@ -285,22 +301,6 @@ export default function Checkout() {
             <Check />
           </div>
         </section>
-        <fieldset className="checkout-payment-methods" disabled={submitting}>
-          <legend>Payment method</legend>
-          {Object.entries(paymentMethods).map(([value, label]) => (
-            <label key={value}>
-              <input type="radio" name="paymentMethod" value={value}
-                checked={order.paymentMethod === value}
-                onChange={() => {
-                  const updated = { ...order, paymentMethod: value as PaymentMethod };
-                  setOrder(updated);
-                  try { localStorage.setItem('chill-pipe-order', JSON.stringify(updated)); } catch { /* Selection remains in memory if storage is unavailable. */ }
-                }} />
-              <span>{label}</span>
-            </label>
-          ))}
-          {payOnArrival(order.paymentMethod) && <p>{order.delivery ? 'Pay the full total, including delivery, on arrival.' : 'Pay the full total when collecting.'}</p>}
-        </fieldset>
         <label className="checkout-flow-accept">
           <input
             type="checkbox"
