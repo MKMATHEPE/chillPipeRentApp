@@ -3,8 +3,9 @@ import { useEffect, useState } from 'react';
 import {
   Check,
   Clock3,
-  CreditCard,
-  PackageCheck,
+  FileText,
+  ChevronRight,
+  CircleHelp,
   RotateCcw,
   Search,
   Truck,
@@ -121,80 +122,43 @@ export default function Track() {
       </main>
     );
   const step = rank[booking.status] ?? 0;
-  const heading =
-    booking.status === 'cancelled'
-      ? 'Booking cancelled.'
-      : booking.status === 'returned'
-        ? 'Equipment returned.'
-        : booking.status === 'approved'
-          ? 'Your quote is ready.'
-          : booking.status === 'payment_review'
-            ? 'Payment received for review.'
-            : booking.status === 'complete'
-              ? booking.deposit > 0
-                ? 'Deposit refund approved.'
-                : 'Your rental is complete.'
-              : step >= 2
-                ? 'Your rental is confirmed.'
-                : 'Request received.';
-  const rows = [
-    ['Request received', 'Your details were saved securely.', PackageCheck, 0],
-    [
-      'Quote approved',
-      'Availability and delivery pricing confirmed.',
-      Clock3,
-      1,
-    ],
-    ['Payment verified', 'Your equipment is reserved.', CreditCard, 2],
-    ['Handover', 'Delivery or collection is completed.', Truck, 3],
-    [
-      booking.deposit > 0 ? 'Return & deposit' : 'Return & inspection',
-      booking.deposit > 0
-        ? 'Inspection and deposit refund.'
-        : 'Equipment returned and inspected.',
-      RotateCcw,
-      5,
-    ],
-  ] as const;
+  const [heading, description] = ({
+    awaiting_review: ['Awaiting approval', 'The owner is reviewing your request.'],
+    approved: ['Booking approved', payOnArrival(booking.paymentMethod) ? 'Your rental is approved. Payment is due at handover.' : 'Your quote is ready. Continue to payment.'],
+    payment_review: ['Payment being verified', 'The owner is checking your payment.'],
+    paid: ['Payment confirmed', 'Your equipment is reserved for your session.'],
+    handed_over: ['Rental in progress', 'Enjoy your session. Return your equipment at the agreed time.'],
+    returned: ['Equipment returned', 'The owner will inspect the returned equipment.'],
+    complete: ['Rental completed', 'Your equipment has been returned and inspected.'],
+    cancelled: ['Booking cancelled', 'Contact us if you need help with this booking.'],
+  } as Record<string, string[]>)[booking.status] || ['Booking status', 'Refresh to check for an update.'];
+  const stages = ['Received', 'Approved', 'Paid', 'Handover', 'Returned', 'Completed'];
+
   return (
     <main className="flow-app tracking-flow">
       <TrackingHeader />
       <section className="flow-sheet tracking-sheet">
         <div className="sheet-handle" />
-        <div className="tracking-badge">
-          <Clock3 size={15} />
-          {booking.status === 'awaiting_review'
-            ? 'Awaiting owner confirmation'
-            : 'Booking status'}
-        </div>
         <h1>{heading}</h1>
-        <p>
-          {booking.status === 'awaiting_review'
-            ? 'We’ll confirm availability before requesting payment.'
-            : 'Refresh to check the latest update on your rental.'}
-        </p>
+        <p aria-live="polite">{description}</p>
         <section className="status-layout">
-          <div className="status-timeline">
-            <h2>Your booking journey</h2>
-            {rows.map(([title, copy, Icon, needed]) => (
-              <div
-                className={
-                  step >= needed ? 'timeline-row active' : 'timeline-row'
-                }
-                key={title}
-              >
-                <span>{step >= needed ? <Check /> : <Icon />}</span>
-                <div>
-                  <strong>{title}</strong>
-                  <p>{copy}</p>
-                </div>
-              </div>
-            ))}
-          </div>
+          {booking.status !== 'cancelled' && booking.status in rank && (
+            <section className="booking-progress" aria-label="Your booking journey">
+              <h2>Your booking journey</h2>
+              <ol>
+                {stages.map((label, index) => (
+                  <li key={label} className={index <= step ? 'done' : ''}
+                    aria-current={index === step ? 'step' : undefined}>
+                    <span className="progress-dot">{index <= step ? <Check size={14} /> : null}</span>
+                    <span>{label}</span>
+                  </li>
+                ))}
+              </ol>
+            </section>
+          )}
           <aside className="status-card">
             <div className="tracking-summary-title">
-              <strong>Your session</strong>
-              <span>{booking.reference}</span>
+              <strong>Booking summary</strong>
             </div>
             <div>
               <span>Reference</span>
@@ -209,6 +173,31 @@ export default function Track() {
                 })}
               </strong>
             </div>
+            <div><span>Fulfilment</span><strong>{booking.delivery ? 'Delivery & collection' : 'Customer collection'}</strong></div>
+            <div><span>Payment type</span><strong>{paymentLabel(booking.paymentMethod)}</strong></div>
+            <div className="status-total">
+              <span>Total</span>
+              <strong>
+                {money(
+                  booking.total + booking.deposit + (booking.deliveryFee || 0),
+                )}
+              </strong>
+            </div>
+            {['awaiting_review', 'approved'].includes(booking.status) && payOnArrival(booking.paymentMethod) && (
+              <p>Pay the full total {booking.delivery ? 'on delivery' : 'when collecting'}.</p>
+            )}
+            {booking.status === 'approved' && !payOnArrival(booking.paymentMethod) && (
+              <a
+                className="status-cta"
+                href={`/payment?reference=${encodeURIComponent(booking.reference)}&phone=${encodeURIComponent(phone)}`}
+              >
+                Continue to payment
+              </a>
+            )}
+          </aside>
+          <details className="booking-details">
+            <summary><FileText size={20} /><span>View booking details</span><ChevronRight size={18} /></summary>
+            <div className="booking-details-body">
             <div>
               <span>Contact number</span>
               <strong>{phone}</strong>
@@ -250,34 +239,10 @@ export default function Track() {
                   : money(booking.deliveryFee)}
               </strong>
             </div>
-            <div className="status-total">
-              <span>Total</span>
-              <strong>
-                {money(
-                  booking.total + booking.deposit + (booking.deliveryFee || 0),
-                )}
-              </strong>
+
             </div>
-            <div><span>Payment method</span><strong>{paymentLabel(booking.paymentMethod)}</strong></div>
-            {booking.status === 'approved' && payOnArrival(booking.paymentMethod) && (
-              <p>Pay the full total {booking.delivery ? 'on delivery' : 'when collecting'}.</p>
-            )}
-            {booking.status === 'approved' && !payOnArrival(booking.paymentMethod) && (
-              <a
-                className="status-cta"
-                href={`/payment?reference=${encodeURIComponent(booking.reference)}&phone=${encodeURIComponent(phone)}`}
-              >
-                Continue to payment
-              </a>
-            )}
-            {booking.status === 'awaiting_review' && (
-              <span className="status-cta disabled">Awaiting approval</span>
-            )}
-            {booking.status === 'payment_review' && (
-              <span className="status-cta disabled">
-                Payment being verified
-              </span>
-            )}
+          </details>
+          <div className="tracking-actions">
             {error && (
               <p className="lookup-error" role="alert">
                 {error}
@@ -291,7 +256,10 @@ export default function Track() {
               <RotateCcw size={16} />
               {loading ? 'Refreshing…' : 'Refresh status'}
             </button>
-          </aside>
+
+            <a href="https://wa.me/27768505523" target="_blank" rel="noreferrer"><CircleHelp size={18} />Need help?</a>
+          </div>
+
         </section>
       </section>
       <TrackingNav />
@@ -308,11 +276,7 @@ function TrackingHeader() {
           window.location.href = '/';
         }}
       />
-      <p>
-        Your session
-        <br />
-        starts here
-      </p>
+
     </section>
   );
 }
