@@ -269,6 +269,7 @@ export default function Checkout() {
           </div>
           <fieldset className="checkout-payment-methods" disabled={submitting}>
             <legend>Payment type</legend>
+            <div className="checkout-payment-options">
             {Object.entries(paymentMethods).map(([value, label]) => (
               <label key={value}>
                 <input type="radio" name="paymentMethod" value={value}
@@ -281,6 +282,7 @@ export default function Checkout() {
                 <span>{label}</span>
               </label>
             ))}
+            </div>
             {payOnArrival(order.paymentMethod) && <p>{order.delivery ? 'Pay the full total, including delivery, on arrival.' : 'Pay the full total when collecting.'}</p>}
           </fieldset>
           <div className="checkout-session-fulfilment">
