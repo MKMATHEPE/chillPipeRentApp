@@ -665,7 +665,7 @@ export default function BookingFlow() {
           <div className="product-carousel">
             <article className="flow-product selected">
               <div className="product-photo">
-                <img src="/hookah-hero.webp" alt="Classic hookah" />
+                <img src="/classic-hookah.webp" alt="Classic hookah" />
               </div>
               <h2>Classic hookah · 2 pipes · R550</h2>
               <p>1 flavour · 8 coconut coals · 4 disposable mouthpieces · Tongs.</p>
