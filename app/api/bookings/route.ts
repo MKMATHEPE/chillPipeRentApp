@@ -70,6 +70,8 @@ export async function POST(request: Request) {
         reference,
         status: 'awaiting_review',
         paymentMethod: body.paymentMethod,
+        quantities: body.quantities || {},
+        delivery: Boolean(body.delivery),
         total,
         deposit,
         deliveryFee,

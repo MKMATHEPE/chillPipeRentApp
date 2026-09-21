@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { takeBookingHandoff } from '@/lib/booking-handoff';
 import {
   Check,
   Clock3,
@@ -79,7 +80,11 @@ export default function Track() {
     const tel = params.get('phone') || saved.phone || '';
     setReference(ref);
     setPhone(tel);
-    if (ref && tel) void load(ref, tel);
+    if (ref && tel) {
+      const freshBooking = takeBookingHandoff(ref, tel);
+      if (freshBooking) setBooking(freshBooking);
+      void load(ref, tel);
+    }
     else setLoading(false);
   }, []);
   if (!booking && loading)

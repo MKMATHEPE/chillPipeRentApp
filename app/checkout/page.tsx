@@ -1,5 +1,6 @@
 'use client';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { saveBookingHandoff } from '@/lib/booking-handoff';
 import {
   Check,
   Home,
@@ -57,6 +58,7 @@ export default function Checkout() {
   const [accepted, setAccepted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
+  const submitLock = useRef(false);
   useEffect(() => {
     const raw = localStorage.getItem('chill-pipe-order');
     if (raw) {
@@ -75,7 +77,8 @@ export default function Checkout() {
     return () => window.removeEventListener('chill-pipe-profile-updated', syncProfile);
   }, []);
   async function placeOrder() {
-    if (!order || submitting || !accepted || !isPaymentMethod(order.paymentMethod)) return;
+    if (!order || submitLock.current || submitting || !accepted || !isPaymentMethod(order.paymentMethod)) return;
+    submitLock.current = true;
     setSubmitting(true);
     setSubmitError('');
     try {
@@ -87,15 +90,17 @@ export default function Checkout() {
       const booking = await response.json();
       if (!response.ok)
         throw new Error(booking.error || 'Could not create booking.');
-      localStorage.setItem(
+      saveBookingHandoff(booking);
+      try { localStorage.setItem(
         'chill-pipe-booking-access',
         JSON.stringify({
           reference: booking.reference,
           phone: order.customer.phone,
         }),
-      );
+      ); } catch { /* Successful checkout can continue using the URL. */ }
       window.location.href = `/track?reference=${encodeURIComponent(booking.reference)}&phone=${encodeURIComponent(order.customer.phone)}`;
     } catch (error) {
+      submitLock.current = false;
       setSubmitError(
         error instanceof Error ? error.message : 'Could not create booking.',
       );

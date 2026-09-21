@@ -38,6 +38,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head><link rel="preload" as="image" href="/hookah-hero.webp" fetchPriority="high" /></head>
       <body
         className={`${geistSans.variable} antialiased`}
       >
