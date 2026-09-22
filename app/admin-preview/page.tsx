@@ -1,8 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { ArrowLeft, ArrowUpRight, Check, ChevronRight, ClipboardList, Inbox, MapPin, Phone, Truck } from 'lucide-react';
+import { ArrowLeft, ArrowUpRight, Check, ChevronRight, ClipboardList, Package, Inbox, MapPin, Phone, Truck } from 'lucide-react';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import Inventory, { demoEquipment, demoRequirements, equipmentAllocation, type EquipmentId, type Allocation } from './inventory';
 import './preview.css';
 import './client-style.css';
 
@@ -20,7 +21,9 @@ const nextStatus: Partial<Record<Status, Status>> = { Approved: 'Handover', Hand
 
 export default function AdminPreview() {
   const [bookings, setBookings] = useState(samples);
-  const [tab, setTab] = useState<'Requests' | 'Bookings'>('Requests');
+  const [equipment, setEquipment] = useState(demoEquipment);
+  const allocations = Object.fromEntries(equipment.map(item => [item.id, equipmentAllocation(bookings, item.id)])) as Record<EquipmentId, Allocation>;
+  const [tab, setTab] = useState<'Requests' | 'Bookings' | 'Inventory'>('Requests');
   const [filter, setFilter] = useState('All');
   const [bookingView, setBookingView] = useState<'Active' | 'History'>('Active');
   const [search, setSearch] = useState('');
@@ -39,10 +42,12 @@ export default function AdminPreview() {
     return bookingView !== 'History' || !query || `${b.name} ${b.id}`.toLowerCase().includes(query);
   }).sort((a, b) => tab === 'Bookings' && bookingView === 'History' ? (b.closedAt ?? 0) - (a.closedAt ?? 0) : 0);
   const booking = bookings.find(b => b.id === selected) ?? visible[0];
-  function changeTab(value: 'Requests' | 'Bookings') { setTab(value); setBookingView('Active'); setSearch(''); setFilter('All'); setSelected(null); setMobileDetails(false); setNotice(''); window.scrollTo({ top: 0 }); }
+  const shortages = booking ? equipment.filter(item => (demoRequirements[booking.id]?.[item.id] ?? 0) > item.total - item.unavailable - allocations[item.id].reserved - allocations[item.id].out).map(item => item.name) : [];
+  function changeTab(value: 'Requests' | 'Bookings' | 'Inventory') { setTab(value); setBookingView('Active'); setSearch(''); setFilter('All'); setSelected(null); setMobileDetails(false); setNotice(''); window.scrollTo({ top: 0 }); }
   function changeView(value: 'Active' | 'History') { setBookingView(value); setFilter('All'); setSearch(''); setSelected(null); setMobileDetails(false); setNotice(''); }
   function confirm() {
     if (!booking || !action || (action === 'Declined' && !reason.trim()) || ((action === 'Handover' || action === 'Completed') && !booking.paid)) return;
+    if (action === 'Approved' && shortages.length) { setNotice(`Not enough available equipment: ${shortages.join(', ')}.`); setAction(null); return; }
     const entry = `${action === 'Paid' ? 'Payment recorded' : action} · ${new Date().toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' })}`;
     const closed = action === 'Completed' || action === 'Declined';
     setBookings(all => all.map(b => b.id !== booking.id ? b : { ...b, status: action === 'Paid' ? b.status : action, paid: action === 'Paid' ? true : b.paid, reason: action === 'Declined' ? reason.trim() : b.reason, history: [...b.history, entry], closedAt: closed ? Date.now() : b.closedAt }));
@@ -56,16 +61,16 @@ export default function AdminPreview() {
     <div className="cp-admin-hero"><img src="/hookah-hero.webp" alt="" /></div>
     <div className={`cp-admin-shell ${mobileDetails ? 'detail-open' : ''}`}>
       <div className="cp-panel-handle" aria-hidden="true" />
-      <div className="cp-preview-note">Design preview · Sample bookings · Resets on refresh</div>
-      <nav className="cp-admin-tabs" aria-label="Admin sections">{(['Requests', 'Bookings'] as const).map(t => <button key={t} aria-current={tab === t ? 'page' : undefined} onClick={() => changeTab(t)}>{t === 'Requests' ? <Inbox size={19} /> : <ClipboardList size={19} />}{t}{t === 'Requests' && <span>{requests.length}</span>}</button>)}</nav>
-      {!mobileDetails && <div className="cp-admin-heading"><div><h1>{tab === 'Requests' ? 'Booking requests' : 'Your bookings'}</h1></div><span>{visible.length} {tab === 'Requests' ? 'awaiting review' : 'bookings'}</span></div>}
+      <div className="cp-preview-note">Design preview · Demo data · Resets on refresh</div>
+      <nav className="cp-admin-tabs" aria-label="Admin sections">{(['Requests', 'Bookings', 'Inventory'] as const).map(t => <button key={t} aria-current={tab === t ? 'page' : undefined} onClick={() => changeTab(t)}>{t === 'Requests' ? <Inbox size={19} /> : t === 'Inventory' ? <Package size={19} /> : <ClipboardList size={19} />}{t}{t === 'Requests' && <span>{requests.length}</span>}</button>)}</nav>
+      {!mobileDetails && <div className="cp-admin-heading"><div><h1>{tab === 'Requests' ? 'Booking requests' : tab === 'Inventory' ? 'Equipment inventory' : 'Your bookings'}</h1></div><span>{tab === 'Inventory' ? '4 equipment types' : `${visible.length} ${tab === 'Requests' ? 'awaiting review' : 'bookings'}`}</span></div>}
       <p className="cp-admin-notice" role="status">{notice}</p>
       {tab === 'Bookings' && !mobileDetails && <>
         <div className="cp-booking-views" role="group" aria-label="Booking view">{(['Active', 'History'] as const).map(v => <button key={v} aria-pressed={bookingView === v} onClick={() => changeView(v)}>{v}</button>)}</div>
         {bookingView === 'History' && <div className="cp-history-search"><input type="search" aria-label="Search booking history" placeholder="Customer name or booking reference" value={search} onChange={e => { setSearch(e.target.value); setSelected(null); }} />{search && <button onClick={() => setSearch('')}>Clear</button>}</div>}
         <div className="cp-filters" aria-label="Filter bookings">{(bookingView === 'History' ? ['All', 'Completed', 'Declined'] : ['All', 'Approved', 'Handover', 'Returned', 'Unpaid']).map(f => <button key={f} aria-pressed={filter === f} onClick={() => { setFilter(f); setSelected(null); setMobileDetails(false); }}>{f}</button>)}</div>
       </>}
-      <div className={`cp-admin-workspace ${mobileDetails ? 'show-detail' : ''}`}>
+      {tab === 'Inventory' ? <Inventory equipment={equipment} allocations={allocations} onSave={item => { setEquipment(all => all.map(e => e.id === item.id ? item : e)); setNotice(`${item.name}: demo inventory updated.`); }} /> : <div className={`cp-admin-workspace ${mobileDetails ? 'show-detail' : ''}`}>
         <section className="cp-booking-list" aria-label={tab}>
           {visible.map(b => <button className="cp-booking-row cp-compact-card" key={b.id} onClick={() => { setSelected(b.id); setMobileDetails(true); window.scrollTo({ top: 0 }); }}>
             <div className="cp-compact-top"><h2>{b.name}</h2><strong>{money(total(b))}</strong></div>
@@ -82,10 +87,11 @@ export default function AdminPreview() {
           <section className="cp-session"><h3>Your session</h3>{booking.items.map(([name, cost]) => <div key={name}><span>{name}</span><strong>{money(cost)}</strong></div>)}<div><span>{booking.fee ? 'Delivery & collection' : 'Customer collection'}</span><strong>{booking.fee ? money(booking.fee) : 'Included'}</strong></div><p>Included per hookah: 1 flavour · 8 coconut coals · 4 disposable mouthpieces · Tongs · 2 Pipe</p><p>Selected flavours: {booking.id === 'DEMO-001' ? 'Lady Killer × 1 · Gum & Mint × 1' : 'Lady Killer × 1'}</p><div className="cp-total"><span>Total</span><strong>{money(total(booking))}</strong></div></section>
           <div className="cp-payment"><div><span>Payment · {booking.paid ? 'Paid' : 'Unpaid'}</span><strong>{booking.payment}</strong></div>{!booking.paid && !['Pending', 'Declined'].includes(booking.status) && <button onClick={() => setAction('Paid')}>Mark paid <Check size={16} /></button>}{booking.paid && <Check aria-label="Paid" size={22} />}</div>
           {booking.reason && <div className="cp-decline-reason"><h3>Decline reason</h3><p>{booking.reason}</p><small>Customer-visible when connected.</small></div>}
-          {booking.status === 'Pending' ? <div className="cp-actions"><button className="cp-secondary" onClick={() => setAction('Declined')}>Decline</button><button className="cp-primary" onClick={() => setAction('Approved')}>Approve booking <ArrowUpRight size={19} /></button></div> : booking.status !== 'Declined' ? <div className="cp-lifecycle"><div className="cp-progress" aria-label="Booking progress">{(['Approved', 'Handover', 'Returned', 'Completed'] as Status[]).map((s, i, all) => <span key={s} aria-current={s === booking.status ? 'step' : undefined} className={i <= all.indexOf(booking.status) ? 'done' : ''}><i />{s}</span>)}</div>{nextStatus[booking.status] && <button className="cp-primary" disabled={(booking.status === 'Approved' || booking.status === 'Returned') && !booking.paid} onClick={() => setAction(nextStatus[booking.status]!)}>Mark {nextStatus[booking.status]?.toLowerCase()} <ChevronRight size={19} /></button>}{!booking.paid && (booking.status === 'Approved' || booking.status === 'Returned') && <p>{booking.status === 'Approved' ? 'Mark paid before handing over the equipment.' : 'Record payment before completing this booking.'}</p>}</div> : null}
+          {booking.status === 'Pending' && shortages.length > 0 && <p className="cp-stock-error" role="status">Not enough available equipment: {shortages.join(', ')}. Update Inventory before approving.</p>}
+          {booking.status === 'Pending' ? <div className="cp-actions"><button className="cp-secondary" onClick={() => setAction('Declined')}>Decline</button><button className="cp-primary" disabled={shortages.length > 0} onClick={() => setAction('Approved')}>Approve booking <ArrowUpRight size={19} /></button></div> : booking.status !== 'Declined' ? <div className="cp-lifecycle"><div className="cp-progress" aria-label="Booking progress">{(['Approved', 'Handover', 'Returned', 'Completed'] as Status[]).map((s, i, all) => <span key={s} aria-current={s === booking.status ? 'step' : undefined} className={i <= all.indexOf(booking.status) ? 'done' : ''}><i />{s}</span>)}</div>{nextStatus[booking.status] && <button className="cp-primary" disabled={(booking.status === 'Approved' || booking.status === 'Returned') && !booking.paid} onClick={() => setAction(nextStatus[booking.status]!)}>Mark {nextStatus[booking.status]?.toLowerCase()} <ChevronRight size={19} /></button>}{!booking.paid && (booking.status === 'Approved' || booking.status === 'Returned') && <p>{booking.status === 'Approved' ? 'Mark paid before handing over the equipment.' : 'Record payment before completing this booking.'}</p>}</div> : null}
           <details className="cp-history"><summary>Activity · {booking.history.length} updates</summary>{booking.history.map((h, i) => <p key={i}>{h}</p>)}</details>
         </article>}
-      </div>
+      </div>}
     </div>
     <Dialog open={!!action} onOpenChange={open => { if (!open) { setAction(null); setReason(''); } }}><DialogContent className="cp-confirm"><DialogTitle>{action === 'Paid' ? 'Record payment?' : `${action === 'Approved' ? 'Approve this booking' : action === 'Declined' ? 'Decline this booking' : `Mark as ${action?.toLowerCase()}`}?`}</DialogTitle><DialogDescription>{action === 'Declined' ? 'Give a clear reason for the customer.' : action === 'Handover' ? 'Confirm the customer has received the equipment.' : action === 'Returned' ? 'Confirm the equipment has been received back.' : action === 'Completed' ? 'Confirm you have inspected the equipment and can close this booking.' : action === 'Paid' ? 'Only record payment after you have verified receipt.' : 'Confirm the equipment and requested rental slot are available.'}</DialogDescription>{action === 'Declined' && <label>Reason for declining<textarea maxLength={500} value={reason} onChange={e => setReason(e.target.value)} placeholder="Explain why this request cannot be accepted" /></label>}<div className="cp-actions"><button className="cp-secondary" onClick={() => setAction(null)}>Cancel</button><button className="cp-primary" disabled={action === 'Declined' && !reason.trim()} onClick={confirm}>Confirm</button></div></DialogContent></Dialog>
   </main>;
