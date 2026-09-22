@@ -51,7 +51,11 @@ export default function AdminPreview() {
       {tab === 'Bookings' && !mobileDetails && <div className="cp-filters" aria-label="Filter bookings">{['All', 'Approved', 'Handover', 'Returned', 'Completed', 'Declined', 'Unpaid'].map(f => <button key={f} aria-pressed={filter === f} onClick={() => { setFilter(f); setSelected(null); setMobileDetails(false); }}>{f}</button>)}</div>}
       <div className={`cp-admin-workspace ${mobileDetails ? 'show-detail' : ''}`}>
         <section className="cp-booking-list" aria-label={tab}>
-          {visible.map(b => <button className="cp-booking-row" key={b.id} onClick={() => { setSelected(b.id); setMobileDetails(true); window.scrollTo({ top: 0 }); }}><div className="cp-row-top"><span>{b.id}</span>{tab === 'Bookings' && <span className="cp-status">{b.status}</span>}</div><h2>{b.name}</h2><p>{b.date}</p><div className="cp-row-bottom"><span>{b.mode === 'Customer collection' ? <MapPin size={15} /> : <Truck size={15} />}{b.mode === 'Customer collection' ? 'Collection' : 'Delivery'}</span><strong>{money(total(b))}</strong><ChevronRight size={17} /></div></button>)}
+          {visible.map(b => <button className="cp-booking-row cp-compact-card" key={b.id} onClick={() => { setSelected(b.id); setMobileDetails(true); window.scrollTo({ top: 0 }); }}>
+            <div className="cp-compact-top"><h2>{b.name}</h2><strong>{money(total(b))}</strong></div>
+            <div className="cp-compact-bottom"><span>{b.date.replace(/\s\d{4}(?=\s·)/, '')} · {b.mode === 'Customer collection' ? 'Collection' : 'Delivery'}</span><ChevronRight size={17} aria-hidden="true" /></div>
+            {tab === 'Bookings' && (filter === 'All' || filter === 'Unpaid') && <span className="cp-compact-status">{b.status}</span>}
+          </button>)}
           {!visible.length && <div className="cp-empty"><Inbox size={30} /><h2>{tab === 'Requests' ? 'All caught up' : 'No matching bookings'}</h2><p>{tab === 'Requests' ? 'New requests will appear here once live bookings are connected.' : 'Choose another filter to view your bookings.'}</p></div>}
         </section>
         {booking && <article className="cp-booking-detail">
