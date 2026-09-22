@@ -7,7 +7,7 @@ import './preview.css';
 import './client-style.css';
 
 type Status = 'Pending' | 'Approved' | 'Handover' | 'Returned' | 'Completed' | 'Declined';
-type Booking = { id: string; name: string; phone: string; date: string; mode: string; address: string; payment: string; paid: boolean; status: Status; items: [string, number][]; fee: number; reason?: string; history: string[] };
+type Booking = { id: string; name: string; phone: string; date: string; mode: string; address: string; payment: string; paid: boolean; status: Status; items: [string, number][]; fee: number; reason?: string; history: string[]; closedAt?: number };
 const samples: Booking[] = [
   { id: 'DEMO-001', name: 'Lerato Mokoena', phone: 'Demo contact', date: '26 Sept 2026 · 14:00–14:30', mode: 'Delivery & collection', address: 'Waterfall, Midrand · Sample address', payment: 'Card on delivery', paid: false, status: 'Pending', items: [['Classic hookah × 2', 1100], ['Coconut coals · 8 pieces × 1', 30]], fee: 250, history: ['Request received · Demo booking'] },
   { id: 'DEMO-002', name: 'Thabo Nkosi', phone: 'Demo contact', date: '26 Sept 2026 · 16:00–16:30', mode: 'Customer collection', address: 'Bel Aire, Langeveld Street, Vorna Valley', payment: 'Pay online', paid: false, status: 'Pending', items: [['Premium hookah × 1', 800], ['Coal stove × 1', 200]], fee: 0, history: ['Request received · Demo booking'] },
@@ -22,21 +22,33 @@ export default function AdminPreview() {
   const [bookings, setBookings] = useState(samples);
   const [tab, setTab] = useState<'Requests' | 'Bookings'>('Requests');
   const [filter, setFilter] = useState('All');
+  const [bookingView, setBookingView] = useState<'Active' | 'History'>('Active');
+  const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<string | null>('DEMO-001');
   const [mobileDetails, setMobileDetails] = useState(false);
   const [action, setAction] = useState<Status | 'Paid' | null>(null);
   const [reason, setReason] = useState('');
   const [notice, setNotice] = useState('');
   const requests = bookings.filter(b => b.status === 'Pending');
-  const visible = bookings.filter(b => tab === 'Requests' ? b.status === 'Pending' : b.status !== 'Pending' && (filter === 'All' || (filter === 'Unpaid' ? !b.paid && b.status !== 'Declined' : b.status === filter)));
-  const booking = visible.find(b => b.id === selected) ?? visible[0];
-  function changeTab(value: 'Requests' | 'Bookings') { setTab(value); setFilter('All'); setSelected(null); setMobileDetails(false); window.scrollTo({ top: 0 }); }
+  const isClosed = (b: Booking) => b.status === 'Completed' || b.status === 'Declined';
+  const query = search.trim().toLowerCase();
+  const visible = bookings.filter(b => {
+    if (tab === 'Requests') return b.status === 'Pending';
+    if (b.status === 'Pending' || isClosed(b) !== (bookingView === 'History')) return false;
+    if (filter !== 'All' && (filter === 'Unpaid' ? b.paid : b.status !== filter)) return false;
+    return bookingView !== 'History' || !query || `${b.name} ${b.id}`.toLowerCase().includes(query);
+  }).sort((a, b) => tab === 'Bookings' && bookingView === 'History' ? (b.closedAt ?? 0) - (a.closedAt ?? 0) : 0);
+  const booking = bookings.find(b => b.id === selected) ?? visible[0];
+  function changeTab(value: 'Requests' | 'Bookings') { setTab(value); setBookingView('Active'); setSearch(''); setFilter('All'); setSelected(null); setMobileDetails(false); setNotice(''); window.scrollTo({ top: 0 }); }
+  function changeView(value: 'Active' | 'History') { setBookingView(value); setFilter('All'); setSearch(''); setSelected(null); setMobileDetails(false); setNotice(''); }
   function confirm() {
     if (!booking || !action || (action === 'Declined' && !reason.trim()) || (action === 'Completed' && !booking.paid)) return;
     const entry = `${action === 'Paid' ? 'Payment recorded' : action} · ${new Date().toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' })}`;
-    setBookings(all => all.map(b => b.id !== booking.id ? b : { ...b, status: action === 'Paid' ? b.status : action, paid: action === 'Paid' ? true : b.paid, reason: action === 'Declined' ? reason.trim() : b.reason, history: [...b.history, entry] }));
-    setNotice(`${booking.id}: ${action === 'Paid' ? 'payment recorded' : action.toLowerCase()}.`);
-    setAction(null); setReason(''); setMobileDetails(tab === 'Bookings');
+    const closed = action === 'Completed' || action === 'Declined';
+    setBookings(all => all.map(b => b.id !== booking.id ? b : { ...b, status: action === 'Paid' ? b.status : action, paid: action === 'Paid' ? true : b.paid, reason: action === 'Declined' ? reason.trim() : b.reason, history: [...b.history, entry], closedAt: closed ? Date.now() : b.closedAt }));
+    setNotice(`${booking.id}: ${action === 'Paid' ? 'payment recorded' : action.toLowerCase()}.${closed ? ' Saved in Bookings → History.' : ''}`);
+    setAction(null); setReason(''); setMobileDetails(tab === 'Bookings' && !closed);
+    if (closed) setSelected(null);
     window.scrollTo({ top: 0 });
   }
   return <main className="cp-admin">
@@ -48,7 +60,11 @@ export default function AdminPreview() {
       <nav className="cp-admin-tabs" aria-label="Admin sections">{(['Requests', 'Bookings'] as const).map(t => <button key={t} aria-current={tab === t ? 'page' : undefined} onClick={() => changeTab(t)}>{t === 'Requests' ? <Inbox size={19} /> : <ClipboardList size={19} />}{t}{t === 'Requests' && <span>{requests.length}</span>}</button>)}</nav>
       {!mobileDetails && <div className="cp-admin-heading"><div><h1>{tab === 'Requests' ? 'Booking requests' : 'Your bookings'}</h1></div><span>{visible.length} {tab === 'Requests' ? 'awaiting review' : 'bookings'}</span></div>}
       <p className="cp-admin-notice" role="status">{notice}</p>
-      {tab === 'Bookings' && !mobileDetails && <div className="cp-filters" aria-label="Filter bookings">{['All', 'Approved', 'Handover', 'Returned', 'Completed', 'Declined', 'Unpaid'].map(f => <button key={f} aria-pressed={filter === f} onClick={() => { setFilter(f); setSelected(null); setMobileDetails(false); }}>{f}</button>)}</div>}
+      {tab === 'Bookings' && !mobileDetails && <>
+        <div className="cp-booking-views" role="group" aria-label="Booking view">{(['Active', 'History'] as const).map(v => <button key={v} aria-pressed={bookingView === v} onClick={() => changeView(v)}>{v}</button>)}</div>
+        {bookingView === 'History' && <div className="cp-history-search"><input type="search" aria-label="Search booking history" placeholder="Customer name or booking reference" value={search} onChange={e => { setSearch(e.target.value); setSelected(null); }} />{search && <button onClick={() => setSearch('')}>Clear</button>}</div>}
+        <div className="cp-filters" aria-label="Filter bookings">{(bookingView === 'History' ? ['All', 'Completed', 'Declined'] : ['All', 'Approved', 'Handover', 'Returned', 'Unpaid']).map(f => <button key={f} aria-pressed={filter === f} onClick={() => { setFilter(f); setSelected(null); setMobileDetails(false); }}>{f}</button>)}</div>
+      </>}
       <div className={`cp-admin-workspace ${mobileDetails ? 'show-detail' : ''}`}>
         <section className="cp-booking-list" aria-label={tab}>
           {visible.map(b => <button className="cp-booking-row cp-compact-card" key={b.id} onClick={() => { setSelected(b.id); setMobileDetails(true); window.scrollTo({ top: 0 }); }}>
@@ -56,7 +72,7 @@ export default function AdminPreview() {
             <div className="cp-compact-bottom"><span>{b.date.replace(/\s\d{4}(?=\s·)/, '')} · {b.mode === 'Customer collection' ? 'Collection' : 'Delivery'}</span><ChevronRight size={17} aria-hidden="true" /></div>
             {tab === 'Bookings' && (filter === 'All' || filter === 'Unpaid') && <span className="cp-compact-status">{b.status}</span>}
           </button>)}
-          {!visible.length && <div className="cp-empty"><Inbox size={30} /><h2>{tab === 'Requests' ? 'All caught up' : 'No matching bookings'}</h2><p>{tab === 'Requests' ? 'New requests will appear here once live bookings are connected.' : 'Choose another filter to view your bookings.'}</p></div>}
+          {!visible.length && <div className="cp-empty"><Inbox size={30} /><h2>{tab === 'Requests' ? 'All caught up' : search || filter !== 'All' ? 'No matching bookings' : bookingView === 'History' ? 'No booking history yet' : 'No active bookings'}</h2><p>{tab === 'Requests' ? 'New requests will appear here once live bookings are connected.' : search || filter !== 'All' ? 'Try another search or filter.' : bookingView === 'History' ? 'Completed and declined bookings will be kept here.' : 'Approved rentals will appear here. Finished bookings are in History.'}</p></div>}
         </section>
         {booking && <article className="cp-booking-detail">
           <button className="cp-back" onClick={() => setMobileDetails(false)}><ArrowLeft size={17} /> Back to {tab.toLowerCase()}</button>
