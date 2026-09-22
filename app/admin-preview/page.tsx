@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { ArrowLeft, ArrowUpRight, Check, ChevronRight, ClipboardList, Inbox, MapPin, Phone, Truck } from 'lucide-react';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import './preview.css';
+import './client-style.css';
 
 type Status = 'Pending' | 'Approved' | 'Handover' | 'Returned' | 'Completed' | 'Declined';
 type Booking = { id: string; name: string; phone: string; date: string; mode: string; address: string; payment: string; paid: boolean; status: Status; items: [string, number][]; fee: number; reason?: string; history: string[] };
@@ -29,25 +30,28 @@ export default function AdminPreview() {
   const requests = bookings.filter(b => b.status === 'Pending');
   const visible = bookings.filter(b => tab === 'Requests' ? b.status === 'Pending' : b.status !== 'Pending' && (filter === 'All' || (filter === 'Unpaid' ? !b.paid && b.status !== 'Declined' : b.status === filter)));
   const booking = visible.find(b => b.id === selected) ?? visible[0];
-  function changeTab(value: 'Requests' | 'Bookings') { setTab(value); setFilter('All'); setSelected(null); setMobileDetails(false); }
+  function changeTab(value: 'Requests' | 'Bookings') { setTab(value); setFilter('All'); setSelected(null); setMobileDetails(false); window.scrollTo({ top: 0 }); }
   function confirm() {
     if (!booking || !action || (action === 'Declined' && !reason.trim()) || (action === 'Completed' && !booking.paid)) return;
     const entry = `${action === 'Paid' ? 'Payment recorded' : action} · ${new Date().toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' })}`;
     setBookings(all => all.map(b => b.id !== booking.id ? b : { ...b, status: action === 'Paid' ? b.status : action, paid: action === 'Paid' ? true : b.paid, reason: action === 'Declined' ? reason.trim() : b.reason, history: [...b.history, entry] }));
     setNotice(`${booking.id}: ${action === 'Paid' ? 'payment recorded' : action.toLowerCase()}. Preview only—no customer was notified.`);
-    setAction(null); setReason(''); setMobileDetails(false);
+    setAction(null); setReason(''); setMobileDetails(tab === 'Bookings');
+    window.scrollTo({ top: 0 });
   }
   return <main className="cp-admin">
     <header className="cp-admin-header"><div className="cp-admin-brand"><img src="/chill-pipe-logo.webp" alt="The Chill Pipe" /><span>ADMIN</span></div><span className="cp-owner">Owner workspace</span></header>
-    <div className="cp-preview-note">Design preview · Sample bookings only · Changes reset on refresh</div>
-    <div className="cp-admin-shell">
+    <div className="cp-admin-hero"><img src="/hookah-hero.webp" alt="" /><p>YOUR BOOKINGS.<br />YOUR WAY.</p></div>
+    <div className={`cp-admin-shell ${mobileDetails ? 'detail-open' : ''}`}>
+      <div className="cp-panel-handle" aria-hidden="true" />
+      <div className="cp-preview-note">Design preview · Sample bookings · Resets on refresh</div>
       <nav className="cp-admin-tabs" aria-label="Admin sections">{(['Requests', 'Bookings'] as const).map(t => <button key={t} aria-current={tab === t ? 'page' : undefined} onClick={() => changeTab(t)}>{t === 'Requests' ? <Inbox size={19} /> : <ClipboardList size={19} />}{t}{t === 'Requests' && <span>{requests.length}</span>}</button>)}</nav>
-      <div className="cp-admin-heading"><div><p>THE CHILL PIPE / OPERATIONS</p><h1>{tab === 'Requests' ? 'Booking requests' : 'Your bookings'}</h1></div><span>{visible.length} {tab === 'Requests' ? 'awaiting review' : 'bookings'}</span></div>
+      {!mobileDetails && <div className="cp-admin-heading"><div><h1>{tab === 'Requests' ? 'Booking requests' : 'Your bookings'}</h1></div><span>{visible.length} {tab === 'Requests' ? 'awaiting review' : 'bookings'}</span></div>}
       <p className="cp-admin-notice" role="status">{notice || (tab === 'Requests' ? 'Review the details. Make the call.' : 'From approval to the final return.')}</p>
-      {tab === 'Bookings' && <div className="cp-filters" aria-label="Filter bookings">{['All', 'Approved', 'Handover', 'Returned', 'Completed', 'Declined', 'Unpaid'].map(f => <button key={f} aria-pressed={filter === f} onClick={() => { setFilter(f); setSelected(null); setMobileDetails(false); }}>{f}</button>)}</div>}
+      {tab === 'Bookings' && !mobileDetails && <div className="cp-filters" aria-label="Filter bookings">{['All', 'Approved', 'Handover', 'Returned', 'Completed', 'Declined', 'Unpaid'].map(f => <button key={f} aria-pressed={filter === f} onClick={() => { setFilter(f); setSelected(null); setMobileDetails(false); }}>{f}</button>)}</div>}
       <div className={`cp-admin-workspace ${mobileDetails ? 'show-detail' : ''}`}>
         <section className="cp-booking-list" aria-label={tab}>
-          {visible.map(b => <button className={`cp-booking-row ${booking?.id === b.id ? 'is-selected' : ''}`} key={b.id} onClick={() => { setSelected(b.id); setMobileDetails(true); }}><div className="cp-row-top"><span>{b.id}</span><span className="cp-status">{b.status === 'Pending' ? 'Needs review' : b.status}</span></div><h2>{b.name}</h2><p>{b.date}</p><div className="cp-row-bottom"><span>{b.mode === 'Customer collection' ? <MapPin size={15} /> : <Truck size={15} />}{b.mode === 'Customer collection' ? 'Collection' : 'Delivery'}</span><strong>{money(total(b))}</strong><ChevronRight size={17} /></div></button>)}
+          {visible.map(b => <button className="cp-booking-row" key={b.id} onClick={() => { setSelected(b.id); setMobileDetails(true); window.scrollTo({ top: 0 }); }}><div className="cp-row-top"><span>{b.id}</span><span className="cp-status">{b.status === 'Pending' ? 'Needs review' : b.status}</span></div><h2>{b.name}</h2><p>{b.date}</p><div className="cp-row-bottom"><span>{b.mode === 'Customer collection' ? <MapPin size={15} /> : <Truck size={15} />}{b.mode === 'Customer collection' ? 'Collection' : 'Delivery'}</span><strong>{money(total(b))}</strong><ChevronRight size={17} /></div></button>)}
           {!visible.length && <div className="cp-empty"><Inbox size={30} /><h2>{tab === 'Requests' ? 'All caught up' : 'No matching bookings'}</h2><p>{tab === 'Requests' ? 'New requests will appear here once live bookings are connected.' : 'Choose another filter to view your bookings.'}</p></div>}
         </section>
         {booking && <article className="cp-booking-detail">
