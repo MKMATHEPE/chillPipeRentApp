@@ -61,7 +61,7 @@ export default function AdminPreview() {
     <div className="cp-admin-hero"><img src="/hookah-hero.webp" alt="" /></div>
     <div className={`cp-admin-shell ${mobileDetails ? 'detail-open' : ''}`}>
       <div className="cp-panel-handle" aria-hidden="true" />
-      <div className="cp-preview-note">Design preview · Demo data · Resets on refresh</div>
+      <div className="cp-preview-note">{tab === 'Inventory' ? 'Demo inventory · Resets on refresh' : 'Design preview · Demo data · Resets on refresh'}</div>
       <nav className="cp-admin-tabs" aria-label="Admin sections">{(['Requests', 'Bookings', 'Inventory'] as const).map(t => <button key={t} aria-current={tab === t ? 'page' : undefined} onClick={() => changeTab(t)}>{t === 'Requests' ? <Inbox size={19} /> : t === 'Inventory' ? <Package size={19} /> : <ClipboardList size={19} />}{t}{t === 'Requests' && <span>{requests.length}</span>}</button>)}</nav>
       {!mobileDetails && <div className="cp-admin-heading"><div><h1>{tab === 'Requests' ? 'Booking requests' : tab === 'Inventory' ? 'Equipment inventory' : 'Your bookings'}</h1></div><span>{tab === 'Inventory' ? '4 equipment types' : `${visible.length} ${tab === 'Requests' ? 'awaiting review' : 'bookings'}`}</span></div>}
       <p className="cp-admin-notice" role="status">{notice}</p>

@@ -53,16 +53,14 @@ export default function Inventory({ equipment, allocations, onSave }: {
     onSave({ ...editing, total, unavailable: blocked, price: editing.price === null ? null : amount }); setEditing(null);
   }
   return <section className="cp-inventory" aria-label="Equipment inventory">
-    <p className="cp-inventory-note">Demo quantities only · Not your actual stock</p>
     {equipment.map(item => {
       const { reserved, out } = allocations[item.id];
       return <article className="cp-equipment" key={item.id} aria-label={item.name}>
-        <div className="cp-equipment-top"><div><h2>{item.name}</h2><p>{item.price === null ? 'Included with each hookah' : `R${item.price.toLocaleString('en-ZA')} · per rental`}</p></div><button onClick={() => edit(item)} aria-label={`Edit ${item.name}`}>Edit</button></div>
+        <div className="cp-equipment-top"><h2>{item.name} <span>· {item.price === null ? 'Included' : `R${item.price.toLocaleString('en-ZA')}`}</span></h2><button onClick={() => edit(item)} aria-label={`Edit ${item.name}`}>Edit</button></div>
         <dl>{[['Available', item.total - item.unavailable - reserved - out], ['Reserved', reserved], ['Out', out], ['Unavailable', item.unavailable]].map(([label, count]) => <div key={label}><dt>{label}</dt><dd>{count}</dd></div>)}</dl>
-        <small>Total demo stock: {item.total}</small>
       </article>;
     })}
-    <p className="cp-inventory-note">Out includes returns awaiting inspection. Completing a booking releases its stock. Demo reservations hold stock until completion; date-based availability comes with live integration.</p>
+    <details className="cp-stock-help"><summary>How stock works</summary><p className="cp-inventory-note">Approval reserves equipment; handover marks it out. Out includes returns awaiting inspection. Completing a booking releases its stock. Tongs are included with each hookah. Demo reservations hold stock until completion; date-based availability comes with live integration.</p></details>
     <Dialog open={!!editing} onOpenChange={open => { if (!open) setEditing(null); }}><DialogContent className="cp-confirm cp-inventory-dialog"><DialogTitle>Edit {editing?.name.toLowerCase()}</DialogTitle><DialogDescription>Demo only. Customer prices and existing booking totals will not change.</DialogDescription><form onSubmit={e => { e.preventDefault(); save(); }}>
       <label>Total stock<input type="number" min="0" max="9999" step="1" value={stock} onChange={e => setStock(e.target.value)} /></label>
       <label>Unavailable units<input type="number" min="0" step="1" value={unavailable} onChange={e => setUnavailable(e.target.value)} /></label>
