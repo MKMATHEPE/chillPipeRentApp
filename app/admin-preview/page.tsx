@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { ArrowLeft, ArrowUpRight, Check, CalendarDays, List, ChevronRight, ClipboardList, Package, Inbox, MapPin, Phone, Truck } from 'lucide-react';
+import { ArrowLeft, ArrowUpRight, Check, CalendarDays, ChevronRight, ClipboardList, Package, Inbox, MapPin, Phone, Truck } from 'lucide-react';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import Inventory, { demoEquipment, demoRequirements, equipmentAllocation, type EquipmentId, type Allocation } from './inventory';
 import BookingCalendar, { localDate } from './booking-calendar';
@@ -27,7 +27,6 @@ export default function AdminPreview() {
   const [tab, setTab] = useState<'Requests' | 'Bookings' | 'Inventory'>('Requests');
   const [filter, setFilter] = useState('All');
   const [bookingView, setBookingView] = useState<'Active' | 'History'>('Active');
-  const [bookingLayout, setBookingLayout] = useState<'List' | 'Calendar'>('List');
   const [calendarDay, setCalendarDay] = useState('2026-09-25');
   const [calendarMonth, setCalendarMonth] = useState('2026-09-01');
   const [search, setSearch] = useState('');
@@ -45,12 +44,12 @@ export default function AdminPreview() {
     if (filter !== 'All' && (filter === 'Unpaid' ? b.paid : b.status !== filter)) return false;
     return bookingView !== 'History' || !query || `${b.name} ${b.id}`.toLowerCase().includes(query);
   }).sort((a, b) => tab === 'Bookings' && bookingView === 'History' ? (b.closedAt ?? 0) - (a.closedAt ?? 0) : 0);
-  const isCalendar = tab === 'Bookings' && bookingView === 'Active' && bookingLayout === 'Calendar';
+  const isCalendar = tab === 'Bookings' && bookingView === 'Active';
   const activeBookings = bookings.filter(b => b.status !== 'Pending' && !isClosed(b));
   const displayed = isCalendar ? activeBookings.filter(b => b.rentalStart.slice(0, 10) === calendarDay).sort((a, b) => a.rentalStart.localeCompare(b.rentalStart)) : visible;
   const booking = bookings.find(b => b.id === selected) ?? displayed[0];
   const shortages = booking ? equipment.filter(item => (demoRequirements[booking.id]?.[item.id] ?? 0) > item.total - item.unavailable - allocations[item.id].reserved - allocations[item.id].out).map(item => item.name) : [];
-  function changeTab(value: 'Requests' | 'Bookings' | 'Inventory') { setTab(value); setBookingLayout('List'); setBookingView('Active'); setSearch(''); setFilter('All'); setSelected(null); setMobileDetails(false); setNotice(''); window.scrollTo({ top: 0 }); }
+  function changeTab(value: 'Requests' | 'Bookings' | 'Inventory') { setTab(value); setBookingView('Active'); setSearch(''); setFilter('All'); setSelected(null); setMobileDetails(false); setNotice(''); window.scrollTo({ top: 0 }); }
   function changeView(value: 'Active' | 'History') { setBookingView(value); setFilter('All'); setSearch(''); setSelected(null); setMobileDetails(false); setNotice(''); }
   function confirm() {
     if (!booking || !action || (action === 'Declined' && !reason.trim()) || ((action === 'Handover' || action === 'Completed') && !booking.paid)) return;
@@ -74,7 +73,6 @@ export default function AdminPreview() {
       <p className="cp-admin-notice" role="status">{notice}</p>
       {tab === 'Bookings' && !mobileDetails && <>
         <div className="cp-booking-views" role="group" aria-label="Booking view">{(['Active', 'History'] as const).map(v => <button key={v} aria-pressed={bookingView === v} onClick={() => changeView(v)}>{v}</button>)}</div>
-        {bookingView === 'Active' && <div className="cp-layout-toggle" role="group" aria-label="Bookings display">{(['List', 'Calendar'] as const).map(layout => <button key={layout} aria-pressed={bookingLayout === layout} onClick={() => { setBookingLayout(layout); setFilter('All'); setSelected(null); }}>{layout === 'List' ? <List size={18} /> : <CalendarDays size={18} />}{layout}</button>)}</div>}
         {isCalendar && <><BookingCalendar starts={activeBookings.map(b => b.rentalStart)} selected={calendarDay} month={calendarMonth} onSelect={day => { setCalendarDay(day); setSelected(null); }} onMonth={day => { setCalendarMonth(day); setCalendarDay(day); setSelected(null); }} /><div className="cp-calendar-day-heading" aria-live="polite"><h2>{localDate(calendarDay).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'long' })}</h2><span>{displayed.length} {displayed.length === 1 ? 'booking' : 'bookings'}</span></div></>}
         {bookingView === 'History' && <div className="cp-history-search"><input type="search" aria-label="Search booking history" placeholder="Customer name or booking reference" value={search} onChange={e => { setSearch(e.target.value); setSelected(null); }} />{search && <button onClick={() => setSearch('')}>Clear</button>}</div>}
         {!isCalendar && <div className="cp-filters" aria-label="Filter bookings">{(bookingView === 'History' ? ['All', 'Completed', 'Declined'] : ['All', 'Approved', 'Handover', 'Returned', 'Unpaid']).map(f => <button key={f} aria-pressed={filter === f} onClick={() => { setFilter(f); setSelected(null); setMobileDetails(false); }}>{f}</button>)}</div>}
@@ -86,7 +84,7 @@ export default function AdminPreview() {
             <div className="cp-compact-bottom"><span>{isCalendar ? b.date.split(' · ')[1] : b.date.replace(/\s\d{4}(?=\s·)/, '')} · {b.mode === 'Customer collection' ? 'Collection' : 'Delivery'}</span><ChevronRight size={17} aria-hidden="true" /></div>
             {tab === 'Bookings' && (filter === 'All' || filter === 'Unpaid') && <span className="cp-compact-status">{b.status}</span>}
           </button>)}
-          {isCalendar && !displayed.length && <div className="cp-empty"><CalendarDays size={30} /><h2>No bookings on this date</h2><p>Select another day or switch to List to see all active bookings.</p></div>}
+          {isCalendar && !displayed.length && <div className="cp-empty"><CalendarDays size={30} /><h2>No bookings on this date</h2><p>Select another date to see its bookings.</p></div>}
           {!isCalendar && !displayed.length && <div className="cp-empty"><Inbox size={30} /><h2>{tab === 'Requests' ? 'All caught up' : search || filter !== 'All' ? 'No matching bookings' : bookingView === 'History' ? 'No booking history yet' : 'No active bookings'}</h2><p>{tab === 'Requests' ? 'New requests will appear here once live bookings are connected.' : search || filter !== 'All' ? 'Try another search or filter.' : bookingView === 'History' ? 'Completed and declined bookings will be kept here.' : 'Approved rentals will appear here. Finished bookings are in History.'}</p></div>}
         </section>
         {booking && <article className="cp-booking-detail">
