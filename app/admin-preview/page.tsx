@@ -1,15 +1,17 @@
 'use client';
 
 import { useState } from 'react';
-import { ArrowLeft, ArrowUpRight, Check, CalendarDays, ChevronRight, ClipboardList, Package, Inbox, MapPin, Phone, Truck } from 'lucide-react';
+import { ArrowLeft, ArrowUpRight, Check, CalendarDays, ChevronRight, ClipboardList, Package, Inbox, MapPin, Phone, Truck, ChartNoAxesColumnIncreasing } from 'lucide-react';
+import Performance from './performance';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import Inventory, { demoEquipment, demoRequirements, equipmentAllocation, type EquipmentId, type Allocation } from './inventory';
 import BookingCalendar, { localDate } from './booking-calendar';
 import './preview.css';
 import './client-style.css';
+import './performance.css';
 
 type Status = 'Pending' | 'Approved' | 'Handover' | 'Returned' | 'Completed' | 'Declined';
-type Booking = { id: string; name: string; phone: string; date: string; rentalStart: string; mode: string; address: string; payment: string; paid: boolean; status: Status; items: [string, number][]; fee: number; reason?: string; history: string[]; closedAt?: number };
+type Booking = { id: string; customerId?: string; paidAt?: number; completedAt?: number; name: string; phone: string; date: string; rentalStart: string; mode: string; address: string; payment: string; paid: boolean; status: Status; items: [string, number][]; fee: number; reason?: string; history: string[]; closedAt?: number };
 const samples: Booking[] = [
   { id: 'DEMO-001', rentalStart: '2026-09-26T14:00', name: 'Lerato Mokoena', phone: 'Not provided', date: '26 Sept 2026 · 14:00–14:30', mode: 'Delivery & collection', address: 'Waterfall, Midrand', payment: 'Card on delivery', paid: false, status: 'Pending', items: [['Classic hookah × 2', 1100], ['Coconut coals · 8 pieces × 1', 30]], fee: 250, history: ['Request received'] },
   { id: 'DEMO-002', rentalStart: '2026-09-26T16:00', name: 'Thabo Nkosi', phone: 'Not provided', date: '26 Sept 2026 · 16:00–16:30', mode: 'Customer collection', address: 'Bel Aire, Langeveld Street, Vorna Valley', payment: 'Pay online', paid: false, status: 'Pending', items: [['Premium hookah × 1', 800], ['Coal stove × 1', 200]], fee: 0, history: ['Request received'] },
@@ -22,10 +24,10 @@ const total = (b: Booking) => b.items.reduce((sum, item) => sum + item[1], b.fee
 const nextStatus: Partial<Record<Status, Status>> = { Approved: 'Handover', Handover: 'Returned', Returned: 'Completed' };
 
 export default function AdminPreview() {
-  const [bookings, setBookings] = useState(samples);
+  const [bookings, setBookings] = useState(() => samples.map(b => ({ ...b, customerId: `customer-${b.id}`, paidAt: b.paid ? Date.parse('2026-09-25T15:00:00+02:00') : undefined })));
   const [equipment, setEquipment] = useState(demoEquipment);
   const allocations = Object.fromEntries(equipment.map(item => [item.id, equipmentAllocation(bookings, item.id)])) as Record<EquipmentId, Allocation>;
-  const [tab, setTab] = useState<'Requests' | 'Bookings' | 'Inventory'>('Requests');
+  const [tab, setTab] = useState<'Requests' | 'Bookings' | 'Inventory' | 'Performance'>('Requests');
   const [filter, setFilter] = useState('All');
   const [bookingView, setBookingView] = useState<'Active' | 'History'>('Active');
   const [calendarDay, setCalendarDay] = useState('2026-09-25');
@@ -50,14 +52,14 @@ export default function AdminPreview() {
   const displayed = isCalendar ? activeBookings.filter(b => b.rentalStart.slice(0, 10) === calendarDay).sort((a, b) => a.rentalStart.localeCompare(b.rentalStart)) : visible;
   const booking = bookings.find(b => b.id === selected) ?? displayed[0];
   const shortages = booking ? equipment.filter(item => (demoRequirements[booking.id]?.[item.id] ?? 0) > item.total - item.unavailable - allocations[item.id].reserved - allocations[item.id].out).map(item => item.name) : [];
-  function changeTab(value: 'Requests' | 'Bookings' | 'Inventory') { setTab(value); setBookingView('Active'); setSearch(''); setFilter('All'); setSelected(null); setMobileDetails(false); setNotice(''); window.scrollTo({ top: 0 }); }
+  function changeTab(value: 'Requests' | 'Bookings' | 'Inventory' | 'Performance') { setTab(value); setBookingView('Active'); setSearch(''); setFilter('All'); setSelected(null); setMobileDetails(false); setNotice(''); window.scrollTo({ top: 0 }); }
   function changeView(value: 'Active' | 'History') { setBookingView(value); setFilter('All'); setSearch(''); setSelected(null); setMobileDetails(false); setNotice(''); }
   function confirm() {
     if (!booking || !action || (action === 'Declined' && !reason.trim()) || ((action === 'Handover' || action === 'Completed') && !booking.paid)) return;
     if (action === 'Approved' && shortages.length) { setNotice(`Not enough available equipment: ${shortages.join(', ')}.`); setAction(null); return; }
     const entry = `${action === 'Paid' ? 'Payment recorded' : action} · ${new Date().toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' })}`;
     const closed = action === 'Completed' || action === 'Declined';
-    setBookings(all => all.map(b => b.id !== booking.id ? b : { ...b, status: action === 'Paid' ? b.status : action, paid: action === 'Paid' ? true : b.paid, reason: action === 'Declined' ? reason.trim() : b.reason, history: [...b.history, entry], closedAt: closed ? Date.now() : b.closedAt }));
+    setBookings(all => all.map(b => b.id !== booking.id ? b : { ...b, status: action === 'Paid' ? b.status : action, paid: action === 'Paid' ? true : b.paid, paidAt: action === 'Paid' ? b.paidAt ?? Date.now() : b.paidAt, completedAt: action === 'Completed' ? b.completedAt ?? Date.now() : b.completedAt, reason: action === 'Declined' ? reason.trim() : b.reason, history: [...b.history, entry], closedAt: closed ? Date.now() : b.closedAt }));
     setNotice(`${reference(booking.id)}: ${action === 'Paid' ? 'payment recorded' : action.toLowerCase()}.${closed ? ' Saved in Bookings → History.' : ''}`);
     setAction(null); setReason(''); setMobileDetails(tab === 'Bookings' && !closed);
     if (closed) setSelected(null);
@@ -68,8 +70,8 @@ export default function AdminPreview() {
     <div className="cp-admin-hero"><img src="/hookah-hero.webp" alt="" /></div>
     <div className={`cp-admin-shell ${mobileDetails ? 'detail-open' : ''}`}>
       <div className="cp-panel-handle" aria-hidden="true" />
-      <nav className="cp-admin-tabs" aria-label="Admin sections">{(['Requests', 'Bookings', 'Inventory'] as const).map(t => <button key={t} aria-current={tab === t ? 'page' : undefined} onClick={() => changeTab(t)}>{t === 'Requests' ? <Inbox size={19} /> : t === 'Inventory' ? <Package size={19} /> : <ClipboardList size={19} />}{t}{t === 'Requests' && <span>{requests.length}</span>}</button>)}</nav>
-      {!mobileDetails && <div className="cp-admin-heading"><div><h1>{tab === 'Requests' ? 'Booking requests' : tab === 'Inventory' ? 'Equipment inventory' : 'Your bookings'}</h1></div><span>{tab === 'Inventory' ? '4 equipment types' : `${visible.length} ${tab === 'Requests' ? 'awaiting review' : 'bookings'}`}</span></div>}
+      <nav className="cp-admin-tabs" aria-label="Admin sections">{(['Requests', 'Bookings', 'Inventory', 'Performance'] as const).map(t => <button key={t} aria-current={tab === t ? 'page' : undefined} onClick={() => changeTab(t)}>{t === 'Requests' ? <Inbox size={19} /> : t === 'Inventory' ? <Package size={19} /> : t === 'Performance' ? <ChartNoAxesColumnIncreasing size={19} /> : <ClipboardList size={19} />}{t}{t === 'Requests' && <span>{requests.length}</span>}</button>)}</nav>
+      {!mobileDetails && <div className="cp-admin-heading"><div><h1>{tab === 'Requests' ? 'Booking requests' : tab === 'Inventory' ? 'Equipment inventory' : tab === 'Performance' ? 'Performance' : 'Your bookings'}</h1></div>{tab !== 'Performance' && <span>{tab === 'Inventory' ? '4 equipment types' : `${visible.length} ${tab === 'Requests' ? 'awaiting review' : 'bookings'}`}</span>}</div>}
       <p className="cp-admin-notice" role="status">{notice}</p>
       {tab === 'Bookings' && !mobileDetails && <>
         <div className="cp-booking-views" role="group" aria-label="Booking view">{(['Active', 'History'] as const).map(v => <button key={v} aria-pressed={bookingView === v} onClick={() => changeView(v)}>{v}</button>)}</div>
@@ -77,7 +79,7 @@ export default function AdminPreview() {
         {bookingView === 'History' && <div className="cp-history-search"><input type="search" aria-label="Search booking history" placeholder="Customer name or booking reference" value={search} onChange={e => { setSearch(e.target.value); setSelected(null); }} />{search && <button onClick={() => setSearch('')}>Clear</button>}</div>}
         {!isCalendar && <div className="cp-filters" aria-label="Filter bookings">{(bookingView === 'History' ? ['All', 'Completed', 'Declined'] : ['All', 'Approved', 'Handover', 'Returned', 'Unpaid']).map(f => <button key={f} aria-pressed={filter === f} onClick={() => { setFilter(f); setSelected(null); setMobileDetails(false); }}>{f}</button>)}</div>}
       </>}
-      {tab === 'Inventory' ? <Inventory equipment={equipment} allocations={allocations} onSave={item => { setEquipment(all => all.map(e => e.id === item.id ? item : e)); setNotice(`${item.name}: inventory updated.`); }} /> : <div className={`cp-admin-workspace ${mobileDetails ? 'show-detail' : ''}`}>
+      {tab === 'Performance' ? <Performance bookings={bookings} /> : tab === 'Inventory' ? <Inventory equipment={equipment} allocations={allocations} onSave={item => { setEquipment(all => all.map(e => e.id === item.id ? item : e)); setNotice(`${item.name}: inventory updated.`); }} /> : <div className={`cp-admin-workspace ${mobileDetails ? 'show-detail' : ''}`}>
         <section className="cp-booking-list" aria-label={tab}>
           {displayed.map(b => <button className="cp-booking-row cp-compact-card" key={b.id} onClick={() => { setSelected(b.id); setMobileDetails(true); window.scrollTo({ top: 0 }); }}>
             <div className="cp-compact-top"><h2>{b.name}</h2><strong>{money(total(b))}</strong></div>
