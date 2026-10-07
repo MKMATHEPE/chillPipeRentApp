@@ -1,7 +1,7 @@
 import { getDb } from '../../../db';
 import { isPaymentMethod } from '@/lib/payment-methods';
 
-const json = (data: unknown, status = 200) => Response.json(data, { status });
+const json = (data: unknown, status = 200) => Response.json(data, { status, headers: { 'Cache-Control': 'no-store' } });
 const clean = (value: unknown, max = 200) =>
   String(value ?? '')
     .trim()
@@ -96,7 +96,7 @@ export async function GET(request: Request) {
       return json({ error: 'Reference and phone number are required.' }, 400);
     const row = await getDb()
       .prepare(
-        `SELECT reference,status,rental_total AS total,deposit,delivery_fee AS deliveryFee,customer_name AS customerName,phone,rental_date AS rentalDate,location,order_json AS orderJson,payment_method AS paymentMethod,created_at AS createdAt,updated_at AS updatedAt FROM bookings WHERE reference=? AND phone=? LIMIT 1`,
+        `SELECT reference,status,decline_reason AS declineReason,rental_total AS total,deposit,delivery_fee AS deliveryFee,customer_name AS customerName,phone,rental_date AS rentalDate,location,order_json AS orderJson,payment_method AS paymentMethod,created_at AS createdAt,updated_at AS updatedAt FROM bookings WHERE reference=? AND phone=? LIMIT 1`,
       )
       .bind(reference, phone)
       .first();

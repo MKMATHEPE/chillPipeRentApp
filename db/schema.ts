@@ -28,4 +28,9 @@ export const bookings=sqliteTable('bookings',{
   paymentMethod:text('payment_method'),
   createdAt:integer('created_at').notNull(),
   updatedAt:integer('updated_at').notNull(),
+  version:integer('version').notNull().default(0),
+  paidAt:integer('paid_at'),
+  completedAt:integer('completed_at'),
+  declineReason:text('decline_reason'),
+  activityJson:text('activity_json').notNull().default('[]'),
 });

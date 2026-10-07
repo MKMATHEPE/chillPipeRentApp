@@ -1,5 +1,6 @@
 import { getDb } from '../../../../db';
 import { AUTH_HEADERS, sameOrigin, verifyAdmin } from '../../../../lib/admin-auth';
+import { actionLabels, toAdminBooking, transition } from '../../../../lib/admin-bookings';
 const reply = (body: unknown, status = 200) => Response.json(body, { status, headers: AUTH_HEADERS });
 async function denyAccess(request: Request) {
   try { return await verifyAdmin(request.headers.get('cookie')) ? null : reply({ error: 'Admin sign-in required.' }, 401); }
@@ -8,20 +9,33 @@ async function denyAccess(request: Request) {
 export async function GET(request: Request) {
   const denied = await denyAccess(request); if (denied) return denied;
   try {
-    const result = await getDb().prepare(`SELECT reference,status,rental_total AS total,deposit,delivery_fee AS deliveryFee,customer_name AS customerName,phone,rental_date AS rentalDate,location,order_json AS orderJson,payment_method AS paymentMethod,created_at AS createdAt FROM bookings ORDER BY created_at DESC LIMIT 100`).all();
-    return reply({ bookings: result.results.map((row: any) => ({ ...row, customer: { name: row.customerName, phone: row.phone, date: row.rentalDate, location: row.location }, ...JSON.parse(String(row.orderJson)) })) });
-  } catch { return reply({ error: 'Bookings unavailable.' }, 500); }
+    const cursor = new URL(request.url).searchParams.get('before');
+    if (cursor && !/^\d{1,15}$/.test(cursor)) return reply({ error: 'Invalid page.' }, 400);
+    const result = await getDb().prepare('SELECT * FROM bookings WHERE id < ? ORDER BY id DESC LIMIT 100').bind(cursor ? Number(cursor) : Number.MAX_SAFE_INTEGER).all();
+    return reply({ bookings: result.results.map(toAdminBooking), nextCursor: result.results.length === 100 ? String(result.results[99].id) : null });
+  } catch { console.error('admin_bookings_read_failed'); return reply({ error: 'Bookings unavailable. Please retry.' }, 503); }
 }
 export async function PATCH(request: Request) {
   if (!sameOrigin(request)) return reply({ error: 'Request not allowed.' }, 403);
   const denied = await denyAccess(request); if (denied) return denied;
+  let body: Record<string, any>;
+  try { body = await request.json(); } catch { return reply({ error: 'Invalid request.' }, 400); }
+  if (!body || typeof body.reference !== 'string' || body.reference.length > 30 || typeof body.status !== 'string' || !Object.hasOwn(actionLabels, body.status) || !Number.isSafeInteger(body.version) || body.version < 0)
+    return reply({ error: 'Invalid booking action.' }, 400);
+  const reason = typeof body.reason === 'string' ? body.reason.trim() : '';
+  if (body.status === 'declined' && (!reason || reason.length > 500)) return reply({ error: 'Enter a decline reason (up to 500 characters).' }, 400);
   try {
-    const body = await request.json() as Record<string, any>;
-    const statuses = ['approved', 'paid', 'handed_over', 'returned', 'complete', 'cancelled'];
-    if (!statuses.includes(body.status)) return reply({ error: 'Invalid status.' }, 400);
-    const fee = body.deliveryFee === null || body.deliveryFee === undefined ? null : Math.max(0, Math.round(Number(body.deliveryFee) || 0));
-    const result = await getDb().prepare(`UPDATE bookings SET status=?,delivery_fee=COALESCE(?,delivery_fee),updated_at=? WHERE reference=?`).bind(body.status, fee, Date.now(), String(body.reference || '')).run();
-    if (!result.meta.changes) return reply({ error: 'Booking not found.' }, 404);
-    return reply({ ok: true });
-  } catch { return reply({ error: 'Could not update booking.' }, 500); }
+    const db = getDb();
+    const row = await db.prepare('SELECT * FROM bookings WHERE reference=?').bind(body.reference).first();
+    if (!row) return reply({ error: 'Booking not found.' }, 404);
+    if (Number(row.version) !== body.version) return reply({ error: 'This booking changed. Refresh and review its latest status.' }, 409);
+    if (!transition[String(row.status)]?.includes(body.status)) return reply({ error: 'Action not allowed at this stage. Payment must be recorded before handover.' }, 409);
+    const now = Date.now();
+    const history = JSON.parse(String(row.activity_json));
+    history.push({ label: actionLabels[body.status], at: now });
+    const updated = await db.prepare(`UPDATE bookings SET status=?,version=version+1,updated_at=?,activity_json=?,decline_reason=CASE WHEN ?='declined' THEN ? ELSE decline_reason END,paid_at=CASE WHEN ?='paid' THEN ? ELSE paid_at END,completed_at=CASE WHEN ?='complete' THEN ? ELSE completed_at END WHERE reference=? AND version=? AND status=? RETURNING *`)
+      .bind(body.status, now, JSON.stringify(history), body.status, reason, body.status, now, body.status, now, body.reference, body.version, row.status).first();
+    if (!updated) return reply({ error: 'This booking changed. Refresh and try again.' }, 409);
+    return reply({ ok: true, booking: toAdminBooking(updated) });
+  } catch { console.error('admin_booking_update_failed'); return reply({ error: 'Could not save this action. Refresh to check its status before trying again.' }, 503); }
 }

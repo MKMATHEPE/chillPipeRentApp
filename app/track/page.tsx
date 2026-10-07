@@ -21,6 +21,7 @@ type Booking = {
   delivery?: boolean;
   reference: string;
   status: string;
+  declineReason?: string;
   total: number;
   deposit: number;
   deliveryFee: number | null;
@@ -44,16 +45,16 @@ export default function Track() {
   const [phone, setPhone] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  async function load(ref = reference, tel = phone) {
+  async function load(ref = reference, tel = phone, quiet = false) {
     if (!ref || !tel) return;
-    setLoading(true);
+    if (!quiet) setLoading(true);
     setError('');
     try {
       const response = await fetch(
         `/api/bookings?reference=${encodeURIComponent(ref)}&phone=${encodeURIComponent(tel)}`,
         { cache: 'no-store' },
       );
-      const data = await response.json();
+      const data = await response.json() as Booking & { error?: string };
       if (!response.ok) throw new Error(data.error || 'Booking not found.');
       setBooking(data);
       setReference(ref);
@@ -87,6 +88,17 @@ export default function Track() {
     }
     else setLoading(false);
   }, []);
+  useEffect(() => {
+    if (!booking || ['complete', 'cancelled', 'declined'].includes(booking.status)) return;
+    let active = true;
+    let timer: ReturnType<typeof setTimeout>;
+    const tick = async () => {
+      if (document.visibilityState === 'visible') await load(booking.reference, phone, true);
+      if (active) timer = setTimeout(tick, 30000);
+    };
+    timer = setTimeout(tick, 30000);
+    return () => { active = false; clearTimeout(timer); };
+  }, [booking?.reference, booking?.status, phone]);
   if (!booking && loading)
     return (
       <main className="flow-app tracking-flow">
@@ -152,6 +164,7 @@ export default function Track() {
     returned: ['Equipment returned', 'The owner will inspect the returned equipment.'],
     complete: ['Rental completed', 'Your equipment has been returned and inspected.'],
     cancelled: ['Booking cancelled', 'Contact us if you need help with this booking.'],
+    declined: ['Booking declined', booking.declineReason || 'Contact us if you need help with this booking.'],
   } as Record<string, string[]>)[booking.status] || ['Booking status', 'Refresh to check for an update.'];
   const stages = ['Received', 'Approved', 'Paid', 'Handover', 'Returned', 'Completed'];
 

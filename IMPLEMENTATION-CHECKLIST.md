@@ -3,17 +3,17 @@
 Process for every step: implement → test → user approval → GitHub push → next step.
 Do not push to GitHub or advance without user approval. Preserve the existing design unless a change is required by the current step.
 
-Last approved GitHub baseline: `6e9bdee1428714d7e37b93e532e8333a2cf8490c` (`main`).
+Last approved GitHub baseline: `6d1dedc94e2a35ceaa521afd5587f456d4334ed1` (`main`), pushed after owner confirmed live sign-in and approved proceeding.
 
 | Step | Scope | Status | Test evidence | Approval / GitHub commit |
 | --- | --- | --- | --- | --- |
-| 1 | Admin sign-in and protected actions | Implemented; awaiting private owner sign-in/sign-out acceptance test | Build passed; 15 local access smoke checks passed; negative-login browser test passed; isolated session tests passed | Awaiting; no GitHub push |
-| 2 | Real customer orders in Admin | Not started | — | — |
-| 3 | Persistent admin changes | Not started | — | — |
-| 4 | Customer tracking updates | Not started | — | — |
+| 1 | Admin sign-in and protected actions | Owner confirmed live sign-in; approved | Prior automated access/session/recovery checks passed; owner login confirmed | Approved; pushed 6d1dedc |
+| 2 | Real customer orders in Admin | Implemented; testing and owner acceptance in progress | Isolated production-route integration passed; see docs/admin-bookings-testing.md | Not yet approved for GitHub |
+| 3 | Persistent admin changes | Included in Step 2 integration | Atomic saved transitions, version checks and activity history tested | Same acceptance gate as Step 2 |
+| 4 | Customer tracking updates | Included in Step 2 integration | Saved statuses and decline reason tested; visible-page refresh added | Same acceptance gate as Step 2 |
 | 5 | Payment integration | Not started | — | — |
 | 6 | Date-based equipment availability | Not started | — | — |
-| 7 | In-app notifications | Not started | — | — |
+| 7 | In-app notifications | Basic open-admin request badge and new-request notice included in Step 2 | 30-second visible-page refresh; no email, push or background notifications | Owner UI test pending |
 | 8 | Live performance reporting | Not started | — | — |
 | 9 | Full end-to-end testing | Not started | — | — |
 
@@ -75,3 +75,17 @@ Last approved GitHub baseline: `6e9bdee1428714d7e37b93e532e8333a2cf8490c` (`main
 - Isolated tests passed: email recipient/redirect, malformed requests, CSRF, invalid identity, successful update, session revocation and replay rejection. Real owner password is never entered by the agent.
 - Local browser: reset page renders; expired-link error appears and URL fragment clears. Build and delivery acceptance are recorded in the task handoff.
 - Email receipt, private password entry and real sign-in await user acceptance. No GitHub push.
+
+## Step 2 — real bookings integration, 7 October 2026
+
+- Owner confirmed live sign-in, approved Step 1 GitHub push and starting Step 2. GitHub main now matches 6d1dedc. Earlier pending Step 1 notes above are historical.
+- Removed sample booking records from admin; reads paginated real customer records from the same database used by checkout and tracking.
+- Admin actions persist, include version checks against stale/double actions, and enforce Approve → Paid → Handover → Returned → Completed on the server.
+- Declines require a reason, persist in History and appear on customer tracking.
+- Existing /admin route redirects to the approved /admin-preview UI, avoiding a second incompatible management screen.
+- Admin updates every 30 seconds while visible and on focus; customer tracking updates every 30 seconds while active. These are in-app updates only.
+- Date formatting uses South Africa time. Saved totals remain authoritative; historical pricing differences are shown explicitly rather than overwritten.
+- Inventory remains example/local state and is labelled accordingly. It must NOT automatically block/approve real orders using invented stock. Owner confirms equipment availability manually until the inventory step.
+- Existing historical payments/completions lack event timestamps; do not invent dates or backfill them from unrelated updates.
+- Test records exist only in isolated in-memory SQLite. No production customer booking or payment was altered by the agent.
+- Do not push Step 2 to GitHub until owner acceptance. Do not begin payment or inventory work without the next approval.

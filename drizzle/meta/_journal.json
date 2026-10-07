@@ -15,6 +15,13 @@
       "when": 1791357555521,
       "tag": "0001_blushing_falcon",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1791400182947,
+      "tag": "0002_sudden_nicolaos",
+      "breakpoints": true
     }
   ]
 }

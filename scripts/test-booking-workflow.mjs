@@ -1,0 +1,101 @@
+// Isolated production-route integration: in-memory SQLite; no real orders or payments.
+import assert from 'node:assert/strict';
+import { readFileSync, readdirSync } from 'node:fs';
+import { DatabaseSync } from 'node:sqlite';
+import ts from 'typescript';
+const sql = new DatabaseSync(':memory:');
+for (const file of readdirSync('drizzle').filter(f => f.endsWith('.sql')).sort()) sql.exec(readFileSync('drizzle/' + file, 'utf8'));
+let unavailable = false;
+const db = { prepare(query) {
+  if (unavailable) throw new Error('Test database outage');
+  const stmt = sql.prepare(query); let args = [];
+  const prepared = { bind(...values) { args = values; return prepared; }, async first() { return stmt.get(...args) || null; }, async all() { return { results: stmt.all(...args) }; }, async run() { return { meta: { changes: Number(stmt.run(...args).changes) } }; } };
+  return prepared;
+} };
+let authenticated = true;
+const auth = { AUTH_HEADERS: { 'Cache-Control': 'no-store' }, sameOrigin: req => req.headers.get('origin') === new URL(req.url).origin, verifyAdmin: async () => authenticated ? { id: 'test-owner' } : null };
+const modules = {};
+function load(file) {
+  const module = { exports: {} };
+  const source = ts.transpileModule(readFileSync(file, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
+  const require = name => {
+    if (name.endsWith('/db')) return { getDb: () => db };
+    if (name.endsWith('/admin-auth')) return auth;
+    if (name.endsWith('/admin-bookings')) return modules.bookings;
+    if (name.endsWith('/payment-methods')) return modules.payment;
+    throw new Error('Unexpected import ' + name);
+  };
+  new Function('require', 'module', 'exports', source)(require, module, module.exports);
+  return module.exports;
+}
+modules.payment = load('lib/payment-methods.ts');
+modules.bookings = load('lib/admin-bookings.ts');
+const client = load('app/api/bookings/route.ts');
+const admin = load('app/api/admin/bookings/route.ts');
+const payment = load('app/api/bookings/payment/route.ts');
+const req = (path, body, method = 'POST', origin = 'https://app.example') => new Request('https://app.example' + path, { method, headers: { origin, 'content-type': 'application/json' }, ...(body === undefined ? {} : { body: JSON.stringify(body) }) });
+const order = { customer: { name: 'Workflow test', phone: '0000000000', date: '2026-10-20T14:00', location: 'Test address', notes: 'Unit 14' }, quantities: { pipe: 1, premium: 1, coalPack: 2, stove: 1 }, selectedFlavours: [{ name: 'Mint', quantity: 3 }], suggestedFlavours: [{ name: 'Mango', quantity: 2, details: 'Test brand' }], total: 1660, delivery: true, deliveryFee: 250, paymentMethod: 'cash_on_delivery' };
+let response = await client.POST(req('/api/bookings', order));
+assert.equal(response.status, 201);
+const created = await response.json();
+const reference = created.reference;
+const fetchAdmin = async () => (await (await admin.GET(req('/api/admin/bookings', undefined, 'GET'))).json()).bookings;
+let booking = (await fetchAdmin())[0];
+assert.equal(booking.id, reference); assert.equal(booking.status, 'Pending'); assert.equal(booking.name, order.customer.name);
+assert.equal(booking.items.reduce((sum, [, n]) => sum + n, booking.fee), 1910);
+assert.equal(booking.rentalStart, '2026-10-20T14:00'); assert.equal(booking.flavours, 'Mint × 3'); assert.match(booking.suggestions, /Mango × 2/); assert.equal(booking.notes, 'Unit 14');
+console.log('PASS customer request → saved database → admin details, quantities, flavours, fee, total and South Africa time');
+const patch = (status, version = booking.version, reason, origin) => admin.PATCH(req('/api/admin/bookings', { reference, status, version, reason }, 'PATCH', origin));
+authenticated = false;
+assert.equal((await admin.GET(req('/api/admin/bookings', undefined, 'GET'))).status, 401);
+assert.equal((await patch('approved')).status, 401); authenticated = true;
+assert.equal((await patch('approved', 0, '', 'https://evil.example')).status, 403);
+assert.equal((await patch('handed_over')).status, 409);
+assert.equal((await patch('declined')).status, 400);
+assert.equal((await patch('complete')).status, 409);
+assert.equal((await admin.PATCH(req('/api/admin/bookings', { reference, status: 'paid' }, 'PATCH'))).status, 400);
+console.log('PASS unauthorized access, cross-origin writes, skipped stages and missing decline reason rejected');
+for (const status of ['approved', 'paid', 'handed_over', 'returned', 'complete']) {
+  response = await patch(status); assert.equal(response.status, 200);
+  const updated = (await response.json()).booking;
+  assert.equal(updated.version, booking.version + 1);
+  assert.equal((await patch(status)).status, 409); // stale/double-click request
+  booking = updated;
+  const tracked = await client.GET(req(`/api/bookings?reference=${reference}&phone=0000000000`, undefined, 'GET'));
+  assert.equal(tracked.headers.get('cache-control'), 'no-store');
+  assert.equal((await tracked.json()).status, status);
+  const persisted = (await fetchAdmin()).find(b => b.id === reference);
+  assert.equal(persisted.rawStatus, status);
+  if (status === 'approved') assert.equal((await patch('handed_over')).status, 409);
+}
+assert.ok(booking.paidAt); assert.ok(booking.completedAt); assert.equal(booking.history.length, 6);
+assert.equal((await patch('approved')).status, 409);
+console.log('PASS approve → paid → handover → returned → completed; customer tracking and reload persistence; duplicate actions rejected');
+response = await client.POST(req('/api/bookings', { ...order, delivery: false, deliveryFee: 0, paymentMethod: 'online' }));
+const second = (await response.json()).reference;
+response = await admin.PATCH(req('/api/admin/bookings', { reference: second, version: 0, status: 'declined', reason: 'No equipment available' }, 'PATCH'));
+assert.equal(response.status, 200);
+const declined = await client.GET(req(`/api/bookings?reference=${second}&phone=0000000000`, undefined, 'GET'));
+assert.equal((await declined.json()).declineReason, 'No equipment available');
+assert.equal((await client.GET(req(`/api/bookings?reference=${second}&phone=wrong`, undefined, 'GET'))).status, 404);
+console.log('PASS decline reason saved and visible only with correct booking lookup; closed booking cannot reopen');
+response = await client.POST(req('/api/bookings', { ...order, paymentMethod: 'online' }));
+const third = (await response.json()).reference;
+await admin.PATCH(req('/api/admin/bookings', { reference: third, version: 0, status: 'approved' }, 'PATCH'));
+assert.equal((await payment.POST(req('/api/bookings/payment', { reference: third, phone: '0000000000', method: 'eft' }))).status, 200);
+assert.equal((await admin.PATCH(req('/api/admin/bookings', { reference: third, version: 1, status: 'paid' }, 'PATCH'))).status, 409);
+assert.equal((await admin.PATCH(req('/api/admin/bookings', { reference: third, version: 2, status: 'paid' }, 'PATCH'))).status, 200);
+console.log('PASS customer payment notification requires manual admin verification and protects against stale updates');
+// Enough isolated records to exercise pagination; nothing reaches production.
+for (let n = 0; n < 100; n++) await client.POST(req('/api/bookings', order));
+const page = await (await admin.GET(req('/api/admin/bookings', undefined, 'GET'))).json();
+assert.equal(page.bookings.length, 100); assert.ok(page.nextCursor);
+const next = await (await admin.GET(req('/api/admin/bookings?before=' + page.nextCursor, undefined, 'GET'))).json();
+assert.equal(next.bookings.length, 3); assert.equal(next.nextCursor, null);
+assert.equal(new Set([...page.bookings, ...next.bookings].map(b => b.id)).size, 103);
+console.log('PASS pagination includes older bookings without duplicates');
+unavailable = true;
+assert.equal((await admin.GET(req('/api/admin/bookings', undefined, 'GET'))).status, 503);
+assert.equal((await patch('paid')).status, 503);
+console.log('PASS unavailable database returns recoverable errors, not success');
+sql.close();
