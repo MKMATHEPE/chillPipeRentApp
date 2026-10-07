@@ -1,2 +1,33 @@
-.cp-login{max-width:520px;min-height:100dvh;margin:auto;background:#090909;color:#111}.cp-login header{display:flex;align-items:center;gap:22px;height:72px;padding:12px 22px;color:white}.cp-login header img{width:118px;height:44px;object-fit:contain}.cp-login header span{border-left:1px solid #777;padding-left:20px;font:12px Arial;letter-spacing:3px}.cp-login-hero{height:155px;overflow:hidden}.cp-login-hero img{width:100%;height:100%;object-fit:cover;object-position:center 47%;opacity:.7}.cp-login section{position:relative;margin-top:-26px;min-height:calc(100dvh - 201px);padding:14px 26px 40px;background:#f5f3ef;border-radius:34px 34px 0 0}.cp-login-handle{width:38px;height:4px;border-radius:10px;background:#ccc;margin:0 auto 30px}.cp-login h1{font:normal 40px/1.15 Georgia,serif;margin:0 0 12px}.cp-login section>p{color:#666;font-size:16px;margin-bottom:28px}.cp-login label{display:block;font-size:14px;margin:20px 0 8px}.cp-login input{width:100%;min-width:0;background:#fff;border:1px solid #ccc;border-radius:14px;padding:14px;font-size:16px;color:#111;min-height:52px}.cp-login-password{display:flex;border:1px solid #ccc;border-radius:14px;background:white;overflow:hidden}.cp-login-password input{border:0;border-radius:0}.cp-login-password button{background:transparent;border:0;padding:0 16px;min-height:48px;font-size:14px;color:#111}.cp-login .cp-login-submit{width:100%;min-height:54px;border:0;border-radius:99px;background:#111;color:white;font-size:16px;margin-top:24px}.cp-login button:disabled{opacity:.6}.cp-login-note{font-size:13px;color:#666;line-height:1.6;margin-top:14px}.cp-login-error{font-size:14px;line-height:1.5;color:#922e25;margin-top:14px}.cp-login-back{display:inline-block;font-size:14px;color:#555;margin-top:20px;text-decoration:underline;padding:12px 0}.cp-login input:focus-visible,.cp-login button:focus-visible{outline:2px solid #555;outline-offset:2px}
-.cp-login header img{filter:invert(1)}
+.cp-login { position:relative; isolation:isolate; min-height:100svh; background:#090909; color:#fff; padding:36px 20px 24px; display:grid; place-items:center; }
+.cp-login-scene { position:absolute; inset:0; z-index:-1; overflow:hidden; pointer-events:none; }
+.cp-login-scene>img { width:100%; height:100%; object-fit:cover; object-position:62% 44%; }
+.cp-login-scene::after { content:""; position:absolute; inset:0; background:linear-gradient(180deg,rgba(0,0,0,.3),rgba(0,0,0,.28) 45%,rgba(0,0,0,.6)); }
+/* Reuse the photograph's real smoke, masking out the equipment. No video or animation library. */
+.cp-login-smoke { position:absolute; inset:-4% -6%; opacity:.38; mask-image:linear-gradient(#000 0%,#000 10%,transparent 24%); animation:cp-smoke-drift 22s ease-in-out infinite alternate; }
+.cp-login-smoke img { width:100%; height:100%; object-fit:cover; object-position:62% 44%; }
+@keyframes cp-smoke-drift { from { transform:translate3d(-10px,12px,0); opacity:.18; } to { transform:translate3d(20px,-18px,0); opacity:.42; } }
+.cp-login:has(#pause-login-smoke:checked) .cp-login-smoke { animation-play-state:paused; }
+.cp-login-content { width:min(100%,420px); display:flex; flex-direction:column; align-items:center; }
+.cp-login header { display:flex; flex-direction:column; align-items:center; gap:12px; margin-bottom:26px; }
+.cp-login header img { width:150px; height:98px; object-fit:contain; filter:invert(1); }
+.cp-login header span { font-size:.75rem; letter-spacing:.42em; padding-left:.42em; color:#dedede; }
+.cp-login section { width:100%; padding:26px; background:rgba(16,16,16,.72); border:1px solid rgba(255,255,255,.27); border-radius:26px; backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); box-shadow:0 18px 50px #0004; }
+.cp-login h1 { font:normal clamp(2rem,7vw,2.6rem)/1.15 Georgia,serif; margin:0 0 8px; text-align:center; }
+.cp-login section>p { color:#d0d0d0; font-size:1rem; margin:0 0 22px; text-align:center; }
+.cp-login form label { display:block; font-size:.875rem; margin:16px 0 8px; color:#f5f5f5; }
+.cp-login form input { width:100%; min-width:0; background:#ffffff09; border:1px solid #898989; border-radius:12px; padding:13px; font-size:1rem; color:#fff; min-height:50px; color-scheme:dark; }
+.cp-login-password { display:flex; border:1px solid #898989; border-radius:12px; background:#ffffff09; overflow:hidden; }
+.cp-login-password input { border:0!important; border-radius:0!important; background:transparent!important; }
+.cp-login-password button { background:transparent; border:0; padding:0 14px; min-width:58px; min-height:48px; font-size:.875rem; color:#fff; cursor:pointer; }
+.cp-login .cp-login-submit { width:100%; min-height:52px; border:0; border-radius:99px; background:#f6f5f2; color:#111; font-size:1rem; font-weight:600; margin-top:24px; cursor:pointer; }
+.cp-login button:disabled { opacity:.6; cursor:wait; }
+.cp-login-note { font-size:.75rem; color:#c7c7c7; line-height:1.5; margin:14px 0 0; }
+.cp-login-error { font-size:.875rem; line-height:1.5; color:#ffb5ac; margin-top:14px; }
+.cp-login-back { display:inline-flex; align-items:center; min-height:44px; font-size:.875rem; color:#dedede; margin-top:12px; text-decoration:underline; text-underline-offset:4px; }
+.cp-login-motion { display:flex; align-items:center; gap:8px; min-height:44px; color:#c7c7c7; font-size:.75rem; cursor:pointer; }
+.cp-login-motion input { width:16px; height:16px; accent-color:#fff; }
+.cp-login input:focus-visible,.cp-login button:focus-visible,.cp-login a:focus-visible { outline:2px solid white; outline-offset:3px; }
+.cp-login-password:focus-within { outline:2px solid white; outline-offset:3px; }
+@media(min-width:800px) { .cp-login { padding-block:40px; } .cp-login-scene>img,.cp-login-smoke img { object-position:center 40%; } }
+@media(max-height:740px) { .cp-login { padding-top:20px; } .cp-login header { gap:8px; margin-bottom:18px; } .cp-login header img { width:120px; height:76px; } .cp-login section { padding:22px; } }
+@media(prefers-reduced-motion:reduce) { .cp-login-smoke { animation:none; display:none; } .cp-login-motion { display:none; } }
