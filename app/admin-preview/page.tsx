@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import AdminSignOut from '@/components/admin-sign-out';
 import { ArrowLeft, ArrowUpRight, Check, CalendarDays, ChevronRight, ClipboardList, Package, Inbox, MapPin, Phone, Truck, ChartNoAxesColumnIncreasing } from 'lucide-react';
 import Performance from './performance';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -66,7 +67,7 @@ export default function AdminPreview() {
     window.scrollTo({ top: 0 });
   }
   return <main className="cp-admin">
-    <header className="cp-admin-header"><div className="cp-admin-brand"><img src="/chill-pipe-logo.webp" alt="The Chill Pipe" /><span>ADMIN</span></div><span className="cp-owner">Owner workspace</span></header>
+    <header className="cp-admin-header"><div className="cp-admin-brand"><img src="/chill-pipe-logo.webp" alt="The Chill Pipe" /><span>ADMIN</span></div><AdminSignOut /></header>
     <div className="cp-admin-hero"><img src="/hookah-hero.webp" alt="" /></div>
     <div className={`cp-admin-shell ${mobileDetails ? 'detail-open' : ''}`}>
       <div className="cp-panel-handle" aria-hidden="true" />

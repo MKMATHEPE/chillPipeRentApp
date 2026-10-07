@@ -1,0 +1,31 @@
+import { mkdir } from 'node:fs/promises';
+import assert from 'node:assert/strict';
+const { chromium } = await import(process.env.PLAYWRIGHT_MODULE || 'playwright');
+const browser = await chromium.launch({ channel: 'chrome', headless: true });
+try {
+  const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  const errors = [];
+  page.on('pageerror', error => errors.push(error.message));
+  await page.goto('http://localhost:3010/admin-preview');
+  await page.waitForURL('**/admin-login');
+  await page.waitForLoadState('networkidle');
+  await page.getByLabel('Email address').fill('auth-negative-test@example.invalid');
+  await page.getByLabel('Password', { exact: true }).fill('NotARealAccount-OnlyNegativeTest!');
+  await page.getByRole('button', { name: 'Show password' }).click();
+  await page.getByRole('button', { name: 'Hide password' }).waitFor();
+  assert.equal(await page.getByLabel('Password', { exact: true }).getAttribute('type'), 'text');
+  await page.getByRole('button', { name: 'Hide password' }).click();
+  const response = page.waitForResponse(r => r.url().endsWith('/api/admin/auth/login'));
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+  assert.equal((await response).status(), 401);
+  await page.getByRole('alert').waitFor();
+  assert.match(await page.getByRole('alert').innerText(), /Check your email and password/);
+  assert.equal(await page.getByLabel('Password', { exact: true }).inputValue(), '');
+  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+  await mkdir('outputs/admin-auth', { recursive: true });
+  await page.screenshot({ path: 'outputs/admin-auth/login-mobile.png', fullPage: true });
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.screenshot({ path: 'outputs/admin-auth/login-desktop.png', fullPage: true });
+  assert.deepEqual(errors, []);
+  console.log('PASS mobile redirect, password visibility, real-provider invalid credentials, inline error, cleared password, no horizontal overflow, no browser exceptions.');
+} finally { await browser.close(); }

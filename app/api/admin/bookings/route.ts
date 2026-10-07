@@ -1,5 +1,27 @@
 import { getDb } from '../../../../db';
-const OWNER_ID='645b1ab1-cd8c-4149-8b7c-f5928a8e721c';
-function allowed(request:Request){return request.headers.get('oai-authenticated-user-id')===OWNER_ID;}
-export async function GET(request:Request){if(!allowed(request))return Response.json({error:'Owner access required.'},{status:403});try{const result=await getDb().prepare(`SELECT reference,status,rental_total AS total,deposit,delivery_fee AS deliveryFee,customer_name AS customerName,phone,rental_date AS rentalDate,location,order_json AS orderJson,payment_method AS paymentMethod,created_at AS createdAt FROM bookings ORDER BY created_at DESC LIMIT 100`).all();return Response.json({bookings:result.results.map((row:any)=>({...row,customer:{name:row.customerName,phone:row.phone,date:row.rentalDate,location:row.location},...JSON.parse(String(row.orderJson))}))});}catch(error){console.error(error);return Response.json({error:'Bookings unavailable.'},{status:500})}}
-export async function PATCH(request:Request){if(!allowed(request))return Response.json({error:'Owner access required.'},{status:403});try{const body=await request.json() as Record<string,any>;const statuses=['approved','paid','handed_over','returned','complete','cancelled'];if(!statuses.includes(body.status))return Response.json({error:'Invalid status.'},{status:400});const fee=body.deliveryFee===null||body.deliveryFee===undefined?null:Math.max(0,Math.round(Number(body.deliveryFee)||0));const result=await getDb().prepare(`UPDATE bookings SET status=?,delivery_fee=COALESCE(?,delivery_fee),updated_at=? WHERE reference=?`).bind(body.status,fee,Date.now(),String(body.reference||'')).run();if(!result.meta.changes)return Response.json({error:'Booking not found.'},{status:404});return Response.json({ok:true});}catch(error){console.error(error);return Response.json({error:'Could not update booking.'},{status:500})}}
+import { AUTH_HEADERS, sameOrigin, verifyAdmin } from '../../../../lib/admin-auth';
+const reply = (body: unknown, status = 200) => Response.json(body, { status, headers: AUTH_HEADERS });
+async function denyAccess(request: Request) {
+  try { return await verifyAdmin(request.headers.get('cookie')) ? null : reply({ error: 'Admin sign-in required.' }, 401); }
+  catch { return reply({ error: 'Admin access temporarily unavailable.' }, 503); }
+}
+export async function GET(request: Request) {
+  const denied = await denyAccess(request); if (denied) return denied;
+  try {
+    const result = await getDb().prepare(`SELECT reference,status,rental_total AS total,deposit,delivery_fee AS deliveryFee,customer_name AS customerName,phone,rental_date AS rentalDate,location,order_json AS orderJson,payment_method AS paymentMethod,created_at AS createdAt FROM bookings ORDER BY created_at DESC LIMIT 100`).all();
+    return reply({ bookings: result.results.map((row: any) => ({ ...row, customer: { name: row.customerName, phone: row.phone, date: row.rentalDate, location: row.location }, ...JSON.parse(String(row.orderJson)) })) });
+  } catch { return reply({ error: 'Bookings unavailable.' }, 500); }
+}
+export async function PATCH(request: Request) {
+  if (!sameOrigin(request)) return reply({ error: 'Request not allowed.' }, 403);
+  const denied = await denyAccess(request); if (denied) return denied;
+  try {
+    const body = await request.json() as Record<string, any>;
+    const statuses = ['approved', 'paid', 'handed_over', 'returned', 'complete', 'cancelled'];
+    if (!statuses.includes(body.status)) return reply({ error: 'Invalid status.' }, 400);
+    const fee = body.deliveryFee === null || body.deliveryFee === undefined ? null : Math.max(0, Math.round(Number(body.deliveryFee) || 0));
+    const result = await getDb().prepare(`UPDATE bookings SET status=?,delivery_fee=COALESCE(?,delivery_fee),updated_at=? WHERE reference=?`).bind(body.status, fee, Date.now(), String(body.reference || '')).run();
+    if (!result.meta.changes) return reply({ error: 'Booking not found.' }, 404);
+    return reply({ ok: true });
+  } catch { return reply({ error: 'Could not update booking.' }, 500); }
+}

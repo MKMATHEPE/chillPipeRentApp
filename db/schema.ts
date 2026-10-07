@@ -1,5 +1,17 @@
 import { integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 
+export const adminSessions = sqliteTable('admin_sessions', {
+  tokenHash: text('token_hash').primaryKey(),
+  userId: text('user_id').notNull(),
+  accessToken: text('access_token').notNull(),
+  expiresAt: integer('expires_at').notNull(),
+});
+export const adminLoginLimits = sqliteTable('admin_login_limits', {
+  bucket: text('bucket').primaryKey(),
+  attempts: integer('attempts').notNull(),
+  expiresAt: integer('expires_at').notNull(),
+});
+
 export const bookings=sqliteTable('bookings',{
   id:integer('id').primaryKey({autoIncrement:true}),
   reference:text('reference').notNull().unique(),
