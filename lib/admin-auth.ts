@@ -50,14 +50,14 @@ export async function revokeSession(cookieHeader: string | null) {
   const token = readSessionCookie(cookieHeader);
   if (token) await getDb().prepare('DELETE FROM admin_sessions WHERE token_hash=?').bind(await digest(token)).run();
 }
-export async function allowLogin(request: Request) {
+export async function allowLogin(request: Request, scope = 'login', limit = 10, windowMs = 600000) {
   const now = Date.now();
   // CF-Connecting-IP is supplied by the trusted hosting proxy, never by form data.
-  const bucket = await digest(`login:${request.headers.get('cf-connecting-ip') || 'shared'}:${Math.floor(now / 600000)}`);
+  const bucket = await digest(`${scope}:${request.headers.get('cf-connecting-ip') || 'shared'}:${Math.floor(now / windowMs)}`);
   await getDb().batch([
     getDb().prepare('DELETE FROM admin_sessions WHERE expires_at<=?').bind(now),
     getDb().prepare('DELETE FROM admin_login_limits WHERE expires_at<=?').bind(now),
   ]);
-  const row = await getDb().prepare('INSERT INTO admin_login_limits(bucket,attempts,expires_at) VALUES (?,1,?) ON CONFLICT(bucket) DO UPDATE SET attempts=attempts+1 RETURNING attempts').bind(bucket, now + 600000).first<{attempts:number}>();
-  return !!row && row.attempts <= 10;
+  const row = await getDb().prepare('INSERT INTO admin_login_limits(bucket,attempts,expires_at) VALUES (?,1,?) ON CONFLICT(bucket) DO UPDATE SET attempts=attempts+1 RETURNING attempts').bind(bucket, now + windowMs).first<{attempts:number}>();
+  return !!row && row.attempts <= limit;
 }

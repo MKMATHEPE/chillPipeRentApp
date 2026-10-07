@@ -63,4 +63,15 @@ Last approved GitHub baseline: `6e9bdee1428714d7e37b93e532e8333a2cf8490c` (`main
 - Automated checks: see `docs/admin-auth-testing.md`.
 - Owner must privately test actual sign-in, reload, sign-out and direct-link denial before approval and GitHub push.
 - Current private Sites access gate remains in place. This is NOT yet publicly accessible independent hosting.
-- Self-service password recovery is not implemented; recover through the Supabase owner dashboard for now.
+- Self-service password setup/recovery added on 7 October 2026 after the owner reported not knowing the app password. Owner completion remains required.
+
+### Password setup — 7 October 2026
+
+- Added /admin-reset and a Set or reset password link; kept the approved dark login styling.
+- Supabase redirect allowlist now contains only the exact app /admin-reset URL (no wildcard added).
+- Recovery sends only to configured administrator email; Supabase validates identity and server enforces the owner UUID before updates.
+- Recovery token remains in page memory, is removed from URL, and is not written to browser storage. Password is never logged.
+- New passwords require 12–128 characters; confirmation checked in UI. Existing app sessions are revoked after success.
+- Isolated tests passed: email recipient/redirect, malformed requests, CSRF, invalid identity, successful update, session revocation and replay rejection. Real owner password is never entered by the agent.
+- Local browser: reset page renders; expired-link error appears and URL fragment clears. Build and delivery acceptance are recorded in the task handoff.
+- Email receipt, private password entry and real sign-in await user acceptance. No GitHub push.

@@ -19,12 +19,15 @@ const db = {
 };
 let identity = { id: 'owner-test', email_confirmed_at: '2026-10-07' };
 let providerError = null;
+let emailRequests = [];
 const fakeClient = { auth: {
+  async resetPasswordForEmail(email, options) { emailRequests.push({email,...options}); return {error:providerError}; },
   async signInWithPassword() { return { data: { user: identity, session: { access_token: 'fake-provider-token', expires_at: Math.floor(Date.now()/1000)+3600 } }, error: providerError }; },
   async getUser() { return { data: { user: identity }, error: providerError }; },
 } };
-const env = { SUPABASE_URL: 'https://auth.invalid', SUPABASE_PUBLISHABLE_KEY: 'fake', ADMIN_USER_ID: 'owner-test' };
+const env = { SUPABASE_URL: 'https://auth.invalid', SUPABASE_PUBLISHABLE_KEY: 'fake', ADMIN_USER_ID: 'owner-test', ADMIN_EMAIL: 'owner@example.invalid', ADMIN_RESET_URL: 'https://app.example/admin-reset' };
 let core;
+let recovery;
 function load(path) {
   const source = ts.transpileModule(readFileSync(path, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
   const module = { exports: {} };
@@ -33,6 +36,7 @@ function load(path) {
     if (name === '@supabase/supabase-js') return { createClient: () => fakeClient };
     if (name.endsWith('/db')) return { getDb: () => db };
     if (name.endsWith('/lib/admin-auth')) return core;
+    if (name.endsWith('/lib/admin-recovery')) return recovery;
     throw new Error('Unexpected dependency ' + name);
   };
   new Function('require', 'module', 'exports', source)(require, module, module.exports);
@@ -79,4 +83,40 @@ sql.exec('DELETE FROM admin_login_limits');
 for(let i=0;i<10;i++) assert.equal(await core.allowLogin(req()), true);
 assert.equal(await core.allowLogin(req()), false);
 console.log('PASS eleventh attempt rate limited');
+recovery=load('lib/admin-recovery.ts');
+const recover=load('app/api/admin/auth/recover/route.ts').POST;
+const reset=load('app/api/admin/auth/reset/route.ts').POST;
+const request=(body,origin='https://app.example')=>new Request('https://app.example/api/admin/auth/reset',{method:'POST',headers:{origin,'content-type':'application/json'},body:JSON.stringify(body)});
+assert.equal((await recover(request({email:'owner@example.invalid'}))).status,200);
+assert.deepEqual(emailRequests,[{email:'owner@example.invalid',redirectTo:'https://app.example/admin-reset'}]);
+assert.equal((await recover(request({email:'other@example.invalid'}))).status,200);
+assert.equal(emailRequests.length,1);
+assert.equal((await recover(request({email:'bad'}))).status,400);
+assert.equal((await reset(request({},'https://evil.example'))).status,403);
+assert.equal((await reset(request({}))).status,401);
+assert.equal((await reset(request({accessToken:'test',password:'short'}))).status,400);
+providerError={status:401};
+assert.equal((await reset(request({accessToken:'test',password:'Test-only-password!'}))).status,401);
+providerError=null;
+identity={id:'other',email_confirmed_at:'2026-10-07'};
+assert.equal((await reset(request({accessToken:'test',password:'Test-only-password!'}))).status,401);
+identity={id:'owner-test',email_confirmed_at:'2026-10-07'};
+const savedFetch=globalThis.fetch;
+let updates=0;
+globalThis.fetch=async (url,options)=>{
+  assert.equal(url,'https://auth.invalid/auth/v1/user');
+  assert.equal(options.method,'PUT');
+  assert.equal(options.headers.Authorization,'Bearer test');
+  updates++;
+  return Response.json({id:'owner-test'});
+};
+try{
+  response=await reset(request({accessToken:'test',password:'Test-only-password!'}));
+  assert.equal(response.status,200);
+  assert.match(response.headers.get('set-cookie'),/Max-Age=0/);
+  assert.equal(sql.prepare('SELECT COUNT(*) AS n FROM admin_sessions').get().n,0);
+  assert.equal((await reset(request({accessToken:'test',password:'Test-only-password!'}))).status,401);
+  assert.equal(updates,1);
+}finally{globalThis.fetch=savedFetch;}
+console.log('PASS recovery recipient/redirect, generic non-owner response, invalid input, CSRF, invalid identity, password update, session revocation, token replay rejection (isolated provider)');
 sql.close();
