@@ -23,7 +23,7 @@ export async function PATCH(request: Request) {
     return reply({error:'Enter valid whole stock quantities and a valid price.'},400);
   try {
     await ensureInventory();
-    const updated = await getDb().prepare(`UPDATE equipment SET total=?,unavailable=?,price=?,version=version+1 WHERE id=? AND version=? AND ?-? >= ${heldSql} RETURNING id`)
+    const updated = await getDb().prepare(`UPDATE equipment SET total=?,unavailable=?,price=?,version=version+1 WHERE id=? AND version=? AND ?-? >= ${heldSql()} RETURNING id`)
       .bind(body.total,body.unavailable,body.price === null ? null : Math.round(body.price*100),body.id,body.version,body.total,body.unavailable).first();
     if (!updated) return reply({error:'Stock changed or these quantities are below reserved/out equipment. Refresh and review before saving.'},409);
     return reply({ok:true,...await inventorySnapshot()});

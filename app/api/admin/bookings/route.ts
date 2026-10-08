@@ -1,8 +1,8 @@
 import { getDb } from '../../../../db';
 import { AUTH_HEADERS, sameOrigin, verifyAdmin } from '../../../../lib/admin-auth';
 import { actionLabels, toAdminBooking, transition } from '../../../../lib/admin-bookings';
-import { requirements } from '../../../../lib/inventory';
-import { ensureInventory, heldSql } from '../../../../lib/inventory-server';
+import { requirements, rentalEpoch, RENTAL_SECONDS } from '../../../../lib/inventory';
+import { ensureInventory, heldSql, outSql } from '../../../../lib/inventory-server';
 const reply = (body: unknown, status = 200) => Response.json(body, { status, headers: AUTH_HEADERS });
 async function denyAccess(request: Request) {
   try { return await verifyAdmin(request.headers.get('cookie')) ? null : reply({ error: 'Admin sign-in required.' }, 401); }
@@ -34,12 +34,17 @@ export async function PATCH(request: Request) {
     if (!transition[String(row.status)]?.includes(body.status)) return reply({ error: 'Action not allowed at this stage. Payment must be recorded before handover.' }, 409);
     let stockGuard = '';
     const stockArgs: number[] = [];
-    if (body.status === 'approved') {
+    if (body.status === 'approved' || body.status === 'handed_over') {
       await ensureInventory();
       const needed = requirements(JSON.parse(String(row.order_json)).quantities || {});
       if (!Object.values(needed).every(n => Number.isSafeInteger(n) && n >= 0) || needed.tongs < 1)
         return reply({error:'This booking has invalid equipment quantities and cannot be approved.'},400);
-      stockGuard = ` AND NOT EXISTS (SELECT 1 FROM equipment WHERE total-unavailable-${heldSql} < CASE equipment.id WHEN 'classic' THEN ? WHEN 'premium' THEN ? WHEN 'stove' THEN ? WHEN 'tongs' THEN ? END)`;
+      const start = rentalEpoch(String(row.rental_date));
+      if (!Number.isSafeInteger(start)) return reply({error:'This booking has an invalid rental date. Correct the request before approval or handover.'},400);
+      if (body.status === 'approved' && start+RENTAL_SECONDS <= Math.floor(Date.now()/1000))
+        return reply({error:'This rental period has already ended. A new request with a current date is required.'},409);
+      const held = body.status === 'approved' ? heldSql(start,start+RENTAL_SECONDS) : outSql;
+      stockGuard = ` AND NOT EXISTS (SELECT 1 FROM equipment WHERE total-unavailable-${held} < CASE equipment.id WHEN 'classic' THEN ? WHEN 'premium' THEN ? WHEN 'stove' THEN ? WHEN 'tongs' THEN ? END)`;
       stockArgs.push(needed.classic,needed.premium,needed.stove,needed.tongs);
     }
     const now = Date.now();

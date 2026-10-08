@@ -132,6 +132,71 @@ const outcomes = await Promise.all(contenders.map(b => admin.PATCH(req('/api/adm
 assert.deepEqual(outcomes.map(r => r.status).sort(),[200,409]);
 assert.equal((await stock()).allocations.tongs.reserved,4);
 console.log('PASS competing approvals cannot overbook tongs; quantities use real customer orders, not demo references');
+// Date-window scenarios use only this disposable in-memory test database.
+sql.exec('DELETE FROM bookings');
+sql.exec('UPDATE equipment SET total=2,unavailable=0');
+const dated = async (date, count = 1) => {
+  const res = await client.POST(req('/api/bookings',{...order,customer:{...order.customer,date},quantities:{pipe:count,premium:0,stove:0,coalPack:0}}));
+  assert.equal(res.status,201);
+  return (await res.json()).reference;
+};
+const act = async (ref,status) => {
+  const row = sql.prepare('SELECT version FROM bookings WHERE reference=?').get(ref);
+  return admin.PATCH(req('/api/admin/bookings',{reference:ref,status,version:row.version},'PATCH'));
+};
+const a = await dated('2099-01-01T10:00');
+const b = await dated('2099-01-02T10:00');
+assert.equal((await act(a,'approved')).status,200);
+assert.equal((await act(b,'approved')).status,200);
+assert.equal((await stock()).allocations.classic.reserved,1);
+const c = await dated('2099-01-02T09:00');
+assert.equal((await act(c,'approved')).status,200); // overlaps A and B, but A/B don't overlap each other
+assert.equal((await stock()).allocations.classic.reserved,2);
+const d = await dated('2099-01-02T09:30');
+assert.equal((await act(d,'approved')).status,409);
+let futureStock = await stock();
+assert.equal((await editStock({...futureStock.equipment[0],total:1})).status,409);
+assert.deepEqual(modules.inventory.windowAllocation(await fetchAdmin(),'classic',modules.inventory.rentalEpoch('2099-01-02T09:30')),{reserved:2,out:0});
+console.log('PASS 24-hour boundary reuse, partial overlap, peak concurrency (not sum of overlaps), UI parity and stock-edit protection');
+assert.equal(modules.inventory.rentalEpoch('2099-01-01T10:00'),modules.inventory.rentalEpoch('2099-01-01T08:00Z'));
+assert.ok(Number.isNaN(modules.inventory.rentalEpoch('2099-02-30T10:00')));
+assert.ok(Number.isNaN(modules.inventory.rentalEpoch('bad-date')));
+const invalid = await dated('2099-01-10T10:00');
+sql.prepare('UPDATE bookings SET rental_date=? WHERE reference=?').run('bad-date',invalid);
+assert.equal((await act(invalid,'approved')).status,400);
+const expired = await dated('2000-01-01T10:00');
+assert.equal((await act(expired,'approved')).status,409);
+console.log('PASS South Africa/UTC equivalence, malformed dates and ended rental requests');
+sql.exec('DELETE FROM bookings');
+sql.exec('UPDATE equipment SET total=1,unavailable=0');
+const early = await dated('2099-02-01T10:00');
+const later = await dated('2099-02-02T10:00');
+assert.equal((await act(early,'approved')).status,200);
+assert.equal((await act(later,'approved')).status,200);
+assert.equal((await act(early,'paid')).status,200);
+assert.equal((await act(later,'paid')).status,200);
+assert.equal((await act(early,'handed_over')).status,200);
+assert.equal((await act(later,'handed_over')).status,409); // physical equipment still out
+const future = await dated('2099-02-10T10:00');
+assert.equal((await act(future,'approved')).status,409);
+assert.equal((await act(early,'returned')).status,200);
+assert.equal((await act(future,'approved')).status,409); // inspection pending
+assert.equal((await act(early,'complete')).status,200);
+assert.equal((await act(later,'handed_over')).status,200);
+await act(later,'returned'); await act(later,'complete');
+assert.equal((await act(future,'approved')).status,200);
+console.log('PASS out/late return and inspection block reuse; physical handover guard; completion restores availability');
+sql.exec('DELETE FROM bookings');
+const race1 = await dated('2099-03-01T10:00'), race2 = await dated('2099-03-01T11:00');
+const dateRace = await Promise.all([act(race1,'approved'),act(race2,'approved')]);
+assert.deepEqual(dateRace.map(r => r.status).sort(),[200,409]);
+console.log('PASS simultaneous overlapping approvals have one winner');
+sql.exec('DELETE FROM bookings');
+const boundary1 = await dated('2099-03-31T23:30+02:00'), boundary2 = await dated('2099-04-01T21:30Z');
+const separateRace = await Promise.all([act(boundary1,'approved'),act(boundary2,'approved')]);
+assert.deepEqual(separateRace.map(r => r.status),[200,200]);
+assert.equal((await stock()).allocations.classic.reserved,1);
+console.log('PASS simultaneous separate-date approvals, month boundary and server UTC/South Africa equivalence');
 unavailable = true;
 assert.equal((await inventory.GET(req('/api/admin/inventory',undefined,'GET'))).status,503);
 assert.equal((await editStock(classic)).status,503);

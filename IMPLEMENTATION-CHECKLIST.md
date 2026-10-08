@@ -12,7 +12,7 @@ Last approved GitHub baseline: `f4ced52ed2b389c07d47eab0161eb6528a0dba98` (`main
 | 3 | Persistent admin changes | Included in Step 2 integration | Atomic saved transitions, version checks and activity history tested | Same acceptance gate as Step 2 |
 | 4 | Customer tracking updates | Included in Step 2 integration | Saved statuses and decline reason tested; visible-page refresh added | Same acceptance gate as Step 2 |
 | 5 | Payment integration | Not started | — | — |
-| 6 | Date-based equipment availability | Not started | — | — |
+| 6 | Date-based equipment availability | Implemented; owner acceptance pending | Isolated route tests: overlapping/adjacent periods, peak demand, concurrent approvals, physical handover guard | Do not push to GitHub until approved |
 | 7 | In-app notifications | Basic open-admin request badge and new-request notice included in Step 2 | 30-second visible-page refresh; no email, push or background notifications | Owner UI test pending |
 | 8 | Live performance reporting | Not started | — | — |
 | 9 | Full end-to-end testing | Not started | — | — |
@@ -102,3 +102,15 @@ Last approved GitHub baseline: `f4ced52ed2b389c07d47eab0161eb6528a0dba98` (`main
 - Auth regression tests passed. Local login renders; authenticated browser acceptance requires owner sign-in. Existing unrelated TypeScript errors in checkout/payment/DB typing remain outside this change.
 - Owner approved Inventory on 8 October 2026 and authorized its GitHub push. Approved implementation: `7dbbb59ff4e417eb56d1207ccf1d45fd426e0c62`, published as Sites version 100. Earlier pending-acceptance notes are historical.
 - Next scope to agree: date-based equipment availability. Current reservations continue holding stock until completion; no new feature changes made with this acceptance.
+
+## Date-based availability — 8 October 2026
+
+- User approved implementation after Inventory was accepted and pushed to GitHub (`b08bcc5`).
+- Planned approved/payment-review/paid rentals reserve [rental start, start + 24 hours), in South Africa time for unzoned dates. Exact end/start boundaries permit planned reuse; no additional turnaround buffer has been assumed.
+- Atomic approval checks peak simultaneous demand within the requested period, not the sum of every booking touching it. Separate dates can share stock.
+- Handed-over and returned/awaiting-inspection equipment remains blocked until completion. Handover checks physical stock again, so an unreturned earlier booking cannot cause a second handover beyond capacity.
+- Inventory cards keep their design. Reserved now means peak upcoming planned demand; Available is capacity remaining after that peak, unavailable units and all equipment out. Help text explains this; selected-request shortage hints use its own period.
+- Stock edits protect peak future demand. Invalid dates and fully ended rental requests cannot be approved. No historical booking statuses or payment records were changed.
+- Tests passed for partial/full overlap, adjacent periods, UTC/SA time, month boundaries, peak-not-sum calculation, concurrent approvals, out/inspection blocking, release on completion, stale edits and authentication regression.
+- Local protected login renders. Authenticated browser acceptance remains with owner; no authentication bypass. Existing unrelated TypeScript errors remain outside scope.
+- Await user acceptance before GitHub push or proceeding to another feature.

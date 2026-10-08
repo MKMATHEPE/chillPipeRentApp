@@ -7,7 +7,7 @@ import { ArrowLeft, ArrowUpRight, Check, CalendarDays, ChevronRight, ClipboardLi
 import Performance from './performance';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import Inventory from './inventory';
-import { requirements, type Equipment, type InventorySnapshot } from '@/lib/inventory';
+import { requirements, rentalEpoch, windowAllocation, type Equipment, type InventorySnapshot } from '@/lib/inventory';
 import BookingCalendar, { localDate } from './booking-calendar';
 import './preview.css';
 import './client-style.css';
@@ -98,7 +98,10 @@ export default function AdminPreview() {
   const displayed = isCalendar ? activeBookings.filter(b => b.rentalStart.slice(0, 10) === calendarDay).sort((a, b) => a.rentalStart.localeCompare(b.rentalStart)) : visible;
   const booking = displayed.find(b => b.id === selected) ?? displayed[0];
   const needed = requirements(booking?.quantities || {});
-  const shortages = inventory?.equipment.filter(item => needed[item.id] > item.total-item.unavailable-inventory.allocations[item.id].reserved-inventory.allocations[item.id].out).map(item => item.name) ?? [];
+  const shortages = inventory?.equipment.filter(item => {
+    const allocation = windowAllocation(bookings,item.id,rentalEpoch(booking?.rentalStart || ''));
+    return needed[item.id] > item.total-item.unavailable-allocation.reserved-allocation.out;
+  }).map(item => item.name) ?? [];
   async function saveInventory(item: Equipment) {
     if (saveLock.current) throw new Error('Another action is saving. Please retry.');
     saveLock.current = true; generation.current++; controller.current?.abort(); fetching.current = false;
