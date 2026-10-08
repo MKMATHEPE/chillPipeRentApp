@@ -14,7 +14,7 @@ export const transition: Record<string, string[]> = {
   paid: ['handed_over'], handed_over: ['returned'], returned: ['complete'],
 };
 export const actionLabels: Record<string, string> = { approved: 'Approved', declined: 'Declined', paid: 'Payment recorded', handed_over: 'Handover', returned: 'Returned', complete: 'Completed' };
-const prices: Record<string, number> = { pipe: 550, premium: 800, coalPack: 30, stove: 200 };
+const prices: Record<string, number> = { pipe: 650, premium: 850, coalPack: 30, stove: 200 };
 const names: Record<string, string> = { pipe: 'Classic hookah', premium: 'Premium hookah', coalPack: 'Coconut coals · 8 pieces', stove: 'Coal stove' };
 const parse = (value: unknown, fallback: any) => { try { return JSON.parse(String(value)); } catch { return fallback; } };
 const list = (value: any) => Array.isArray(value) ? value : [];

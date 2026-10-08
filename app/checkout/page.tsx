@@ -32,8 +32,8 @@ type Order = {
   total: number;
 };
 const prices: Record<string, number> = {
-  pipe: 550,
-  premium: 800,
+  pipe: 650,
+  premium: 850,
   coalPack: 30,
   stove: 200,
 };
@@ -85,7 +85,7 @@ export default function Checkout() {
       const response = await fetch('/api/bookings', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(order),
+        body: JSON.stringify({ ...order, total: rentalTotal }),
       });
       const booking = await response.json();
       if (!response.ok)
@@ -132,6 +132,8 @@ export default function Checkout() {
   const hookahUnits =
     (order?.quantities.pipe || 0) + (order?.quantities.premium || 0);
   const additionalFlavourUnits = Math.max(0, flavourUnits - hookahUnits);
+  // Reprice unsubmitted drafts so an older saved total cannot disagree with the card.
+  const rentalTotal = lines.reduce((sum, line) => sum + line.amount, 0) + additionalFlavourUnits * 50;
   if (!hydrated)
     return (
       <main className="empty-cart checkout-loading" aria-busy="true">
@@ -253,7 +255,7 @@ export default function Checkout() {
             <span>{payOnArrival(order.paymentMethod) ? (order.delivery ? 'Due on delivery' : 'Due on collection') : 'Due after approval'}</span>
             <strong>
               {money(
-                order.total +
+                rentalTotal +
                   deliveryFee,
               )}
             </strong>

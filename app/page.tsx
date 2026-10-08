@@ -301,8 +301,8 @@ export default function BookingFlow() {
   const additionalFlavourUnits = Math.max(0, flavourUnits - hookahUnits);
   const total = useMemo(
     () =>
-      pipeQty * 550 +
-      premiumQty * 800 +
+      pipeQty * 650 +
+      premiumQty * 850 +
       additionalFlavourUnits * 50 +
       coalPackQty * 30 +
       stoveQty * 200,
@@ -667,7 +667,7 @@ export default function BookingFlow() {
               <div className="product-photo">
                 <img src="/classic-hookah.webp" alt="Classic hookah" />
               </div>
-              <h2>Classic hookah · 2 pipes · R550</h2>
+              <h2>Classic hookah · 2 pipes · R650</h2>
               <p>1 flavour · 8 coconut coals · 4 disposable mouthpieces · Tongs.</p>
               <Quantity value={pipeQty} onChange={setPipeQty} min={0} />
             </article>
@@ -675,7 +675,7 @@ export default function BookingFlow() {
               <div className="product-photo">
                 <img src="/hookah-hero.webp" alt="Premium hookah" />
               </div>
-              <h2>Premium hookah · 2 pipes · R800</h2>
+              <h2>Premium hookah · 2 pipes · R850</h2>
               <p>1 flavour · 8 coconut coals · 4 disposable mouthpieces · Tongs.</p>
               <Quantity value={premiumQty} onChange={setPremiumQty} min={0} />
             </article>
