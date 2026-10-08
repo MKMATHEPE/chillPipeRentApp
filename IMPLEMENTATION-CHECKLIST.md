@@ -14,7 +14,7 @@ Last approved GitHub baseline: `f4ced52ed2b389c07d47eab0161eb6528a0dba98` (`main
 | 5 | Payment integration | Not started | — | — |
 | 6 | Date-based equipment availability | Implemented; owner acceptance pending | Isolated route tests: overlapping/adjacent periods, peak demand, concurrent approvals, physical handover guard | Do not push to GitHub until approved |
 | 7 | In-app notifications | Basic open-admin request badge and new-request notice included in Step 2 | 30-second visible-page refresh; no email, push or background notifications | Owner UI test pending |
-| 8 | Live performance reporting | Implemented; owner acceptance pending | Reporting fixtures, real-route integration and component render checks | GitHub push after owner approval |
+| 8 | Live performance reporting | Implemented; owner approved | Reporting fixtures, real-route integration and component render checks passed | Approved ad5cd15; GitHub push authorized |
 | 9 | Full end-to-end testing | Not started | — | — |
 
 ## Step 1 — discovery, 6 October 2026
@@ -123,4 +123,5 @@ Last approved GitHub baseline: `f4ced52ed2b389c07d47eab0161eb6528a0dba98` (`main
 - Added valid South Africa date-range handling, bounded chart groups, duplicate/version safeguards, currency rounding and a notice for older records with undated events. No invented event dates or backfills.
 - Loading/error reporting states do not display false zero figures. Existing 30-second visible-page/focus refresh is preserved.
 - Isolated tests cover exact totals, charts, dates/midnight, invalid/reversed/future dates, repeat customers, quantities, undated history, duplicate records and actual saved booking lifecycle → reporting. No production customer/payment data was modified for tests.
-- Owner signed-in browser review and approval remain pending. Do not push this Performance update to GitHub or begin the next feature until accepted.
+- Owner approved the Performance update on 8 October 2026 and authorized its GitHub push. Approved implementation: `ad5cd1527c85a7e44ceeec89d29fb8d4d6af0e23`, published as Sites version 102. Earlier pending-approval notes are historical; this acceptance does not claim additional agent-run browser tests.
+- No next feature started. Continue the agreed implement → test → owner approval → GitHub process for the next selected step.
