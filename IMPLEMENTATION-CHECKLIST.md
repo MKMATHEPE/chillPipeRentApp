@@ -100,4 +100,5 @@ Last approved GitHub baseline: `f4ced52ed2b389c07d47eab0161eb6528a0dba98` (`main
 - Approved/payment-review/paid reserves equipment; handover/returned is out; completion releases stock. This is conservative stock holding until completion, NOT date-based reuse. One tong per hookah means 20 tongs can support at most 20 simultaneous hookahs.
 - Isolated actual-route integration passed: initialization, durable edits, stale/invalid/unauthorized/CSRF rejection, below-held edits, full lifecycle, competing approvals and outage responses. No production booking/payment was changed for tests.
 - Auth regression tests passed. Local login renders; authenticated browser acceptance requires owner sign-in. Existing unrelated TypeScript errors in checkout/payment/DB typing remain outside this change.
-- Inventory owner acceptance and GitHub push remain pending. Do not advance to another feature or push Inventory without acceptance.
+- Owner approved Inventory on 8 October 2026 and authorized its GitHub push. Approved implementation: `7dbbb59ff4e417eb56d1207ccf1d45fd426e0c62`, published as Sites version 100. Earlier pending-acceptance notes are historical.
+- Next scope to agree: date-based equipment availability. Current reservations continue holding stock until completion; no new feature changes made with this acceptance.
