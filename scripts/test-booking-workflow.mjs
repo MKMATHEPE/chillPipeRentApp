@@ -32,6 +32,7 @@ function load(file) {
 }
 modules.payment = load('lib/payment-methods.ts');
 modules.bookings = load('lib/admin-bookings.ts');
+modules.performance = load('lib/performance.ts');
 modules.inventory = load('lib/inventory.ts');
 modules.inventoryServer = load('lib/inventory-server.ts');
 const inventory = load('app/api/admin/inventory/route.ts');
@@ -86,7 +87,7 @@ for (const status of ['approved', 'paid', 'handed_over', 'returned', 'complete']
   assert.equal(persisted.rawStatus, status);
   if (status === 'approved') assert.equal((await patch('handed_over')).status, 409);
 }
-assert.ok(booking.paidAt); assert.ok(booking.completedAt); assert.equal(booking.history.length, 6);
+assert.ok(booking.paidAt); assert.ok(booking.handedOverAt); assert.ok(booking.completedAt); assert.equal(booking.history.length, 6);
 assert.equal((await patch('approved')).status, 409);
 console.log('PASS approve → paid → handover → returned → completed; customer tracking and reload persistence; duplicate actions rejected');
 response = await client.POST(req('/api/bookings', { ...order, delivery: false, deliveryFee: 0, paymentMethod: 'online' }));
@@ -104,6 +105,12 @@ assert.equal((await payment.POST(req('/api/bookings/payment', { reference: third
 assert.equal((await admin.PATCH(req('/api/admin/bookings', { reference: third, version: 1, status: 'paid' }, 'PATCH'))).status, 409);
 assert.equal((await admin.PATCH(req('/api/admin/bookings', { reference: third, version: 2, status: 'paid' }, 'PATCH'))).status, 200);
 console.log('PASS customer payment notification requires manual admin verification and protects against stale updates');
+const reportDate = modules.performance.reportDay(Date.now());
+const liveResults = modules.performance.performanceReport(await fetchAdmin(),reportDate,reportDate,reportDate);
+assert.equal(liveResults.received,3820);assert.equal(liveResults.completed.length,1);assert.equal(liveResults.handedOver.length,1);
+assert.deepEqual(liveResults.quantities,{Classic:1,Premium:1});
+assert.equal(liveResults.bars.reduce((s,b)=>s+b.money,0),3820);
+console.log('PASS actual saved booking/payment/handover/completion events feed accurate Performance totals and chart');
 // Enough isolated records to exercise pagination; nothing reaches production.
 for (let n = 0; n < 100; n++) await client.POST(req('/api/bookings', order));
 const page = await (await admin.GET(req('/api/admin/bookings', undefined, 'GET'))).json();

@@ -14,7 +14,7 @@ Last approved GitHub baseline: `f4ced52ed2b389c07d47eab0161eb6528a0dba98` (`main
 | 5 | Payment integration | Not started | — | — |
 | 6 | Date-based equipment availability | Implemented; owner acceptance pending | Isolated route tests: overlapping/adjacent periods, peak demand, concurrent approvals, physical handover guard | Do not push to GitHub until approved |
 | 7 | In-app notifications | Basic open-admin request badge and new-request notice included in Step 2 | 30-second visible-page refresh; no email, push or background notifications | Owner UI test pending |
-| 8 | Live performance reporting | Not started | — | — |
+| 8 | Live performance reporting | Implemented; owner acceptance pending | Reporting fixtures, real-route integration and component render checks | GitHub push after owner approval |
 | 9 | Full end-to-end testing | Not started | — | — |
 
 ## Step 1 — discovery, 6 October 2026
@@ -114,3 +114,13 @@ Last approved GitHub baseline: `f4ced52ed2b389c07d47eab0161eb6528a0dba98` (`main
 - Tests passed for partial/full overlap, adjacent periods, UTC/SA time, month boundaries, peak-not-sum calculation, concurrent approvals, out/inspection blocking, release on completion, stale edits and authentication regression.
 - Local protected login renders. Authenticated browser acceptance remains with owner; no authentication bypass. Existing unrelated TypeScript errors remain outside scope.
 - Owner approved date-based availability and starting live Performance reporting on 8 October 2026. Approved implementation: `a870a28a5d2dae7b10a56566ee8a13b4dabdb4fb`, Sites version 101. GitHub push authorized; earlier pending notes are historical.
+
+## Live Performance reporting — 8 October 2026
+
+- Date-based availability plus approval record pushed to GitHub `main` at `f8ee688`. User authorized starting this step.
+- Existing Performance already consumed real admin bookings. Kept its design and core metrics; extracted and verified calculations, replaced display-label quantity parsing with saved quantities, added handover counts from saved activity timestamps.
+- Money received is gross recorded receipts (including delivery/add-ons and any historical deposit), not profit or net refunds. It requires paid status and a recorded payment timestamp. Completed rental counts and equipment popularity use completion dates; handovers use their own event dates.
+- Added valid South Africa date-range handling, bounded chart groups, duplicate/version safeguards, currency rounding and a notice for older records with undated events. No invented event dates or backfills.
+- Loading/error reporting states do not display false zero figures. Existing 30-second visible-page/focus refresh is preserved.
+- Isolated tests cover exact totals, charts, dates/midnight, invalid/reversed/future dates, repeat customers, quantities, undated history, duplicate records and actual saved booking lifecycle → reporting. No production customer/payment data was modified for tests.
+- Owner signed-in browser review and approval remain pending. Do not push this Performance update to GitHub or begin the next feature until accepted.

@@ -4,7 +4,7 @@ export type Status = 'Pending' | 'Approved' | 'Handover' | 'Returned' | 'Complet
 export type AdminBooking = {
   id: string; version: number; rawStatus: string; customerId: string; name: string; phone: string;
   rentalStart: string; date: string; mode: string; address: string; payment: string; paid: boolean;
-  paidAt?: number; completedAt?: number; closedAt?: number; status: Status;
+  paidAt?: number; handedOverAt?: number; completedAt?: number; closedAt?: number; status: Status;
   items: [string, number][]; fee: number; reason?: string; history: string[];
   flavours: string; suggestions: string; notes: string; quantities: Record<string, number>;
 };
@@ -43,6 +43,7 @@ export function toAdminBooking(row: Record<string, any>): AdminBooking {
     mode: order.delivery ? 'Delivery & collection' : 'Customer collection', address: row.location,
     payment: paymentLabel(row.payment_method), paid: ['paid', 'handed_over', 'returned', 'complete'].includes(row.status),
     paidAt: row.paid_at ?? undefined, completedAt: row.completed_at ?? undefined,
+    handedOverAt: list(parse(row.activity_json, [])).find((entry: any) => entry?.label === 'Handover' && typeof entry.at === 'number' && Number.isFinite(entry.at))?.at,
     closedAt: ['complete', 'declined', 'cancelled'].includes(row.status) ? row.updated_at : undefined,
     status: labels[row.status] || 'Pending', items, fee: Number(row.delivery_fee) || 0,
     reason: row.decline_reason || undefined, history: ['Request received', ...history],
