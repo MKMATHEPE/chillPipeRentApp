@@ -113,4 +113,4 @@ Last approved GitHub baseline: `f4ced52ed2b389c07d47eab0161eb6528a0dba98` (`main
 - Stock edits protect peak future demand. Invalid dates and fully ended rental requests cannot be approved. No historical booking statuses or payment records were changed.
 - Tests passed for partial/full overlap, adjacent periods, UTC/SA time, month boundaries, peak-not-sum calculation, concurrent approvals, out/inspection blocking, release on completion, stale edits and authentication regression.
 - Local protected login renders. Authenticated browser acceptance remains with owner; no authentication bypass. Existing unrelated TypeScript errors remain outside scope.
-- Await user acceptance before GitHub push or proceeding to another feature.
+- Owner approved date-based availability and starting live Performance reporting on 8 October 2026. Approved implementation: `a870a28a5d2dae7b10a56566ee8a13b4dabdb4fb`, Sites version 101. GitHub push authorized; earlier pending notes are historical.
