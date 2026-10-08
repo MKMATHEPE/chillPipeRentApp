@@ -1,6 +1,8 @@
 import { getDb } from '../../../../db';
 import { AUTH_HEADERS, sameOrigin, verifyAdmin } from '../../../../lib/admin-auth';
 import { actionLabels, toAdminBooking, transition } from '../../../../lib/admin-bookings';
+import { requirements } from '../../../../lib/inventory';
+import { ensureInventory, heldSql } from '../../../../lib/inventory-server';
 const reply = (body: unknown, status = 200) => Response.json(body, { status, headers: AUTH_HEADERS });
 async function denyAccess(request: Request) {
   try { return await verifyAdmin(request.headers.get('cookie')) ? null : reply({ error: 'Admin sign-in required.' }, 401); }
@@ -30,12 +32,22 @@ export async function PATCH(request: Request) {
     if (!row) return reply({ error: 'Booking not found.' }, 404);
     if (Number(row.version) !== body.version) return reply({ error: 'This booking changed. Refresh and review its latest status.' }, 409);
     if (!transition[String(row.status)]?.includes(body.status)) return reply({ error: 'Action not allowed at this stage. Payment must be recorded before handover.' }, 409);
+    let stockGuard = '';
+    const stockArgs: number[] = [];
+    if (body.status === 'approved') {
+      await ensureInventory();
+      const needed = requirements(JSON.parse(String(row.order_json)).quantities || {});
+      if (!Object.values(needed).every(n => Number.isSafeInteger(n) && n >= 0) || needed.tongs < 1)
+        return reply({error:'This booking has invalid equipment quantities and cannot be approved.'},400);
+      stockGuard = ` AND NOT EXISTS (SELECT 1 FROM equipment WHERE total-unavailable-${heldSql} < CASE equipment.id WHEN 'classic' THEN ? WHEN 'premium' THEN ? WHEN 'stove' THEN ? WHEN 'tongs' THEN ? END)`;
+      stockArgs.push(needed.classic,needed.premium,needed.stove,needed.tongs);
+    }
     const now = Date.now();
     const history = JSON.parse(String(row.activity_json));
     history.push({ label: actionLabels[body.status], at: now });
-    const updated = await db.prepare(`UPDATE bookings SET status=?,version=version+1,updated_at=?,activity_json=?,decline_reason=CASE WHEN ?='declined' THEN ? ELSE decline_reason END,paid_at=CASE WHEN ?='paid' THEN ? ELSE paid_at END,completed_at=CASE WHEN ?='complete' THEN ? ELSE completed_at END WHERE reference=? AND version=? AND status=? RETURNING *`)
-      .bind(body.status, now, JSON.stringify(history), body.status, reason, body.status, now, body.status, now, body.reference, body.version, row.status).first();
-    if (!updated) return reply({ error: 'This booking changed. Refresh and try again.' }, 409);
+    const updated = await db.prepare(`UPDATE bookings SET status=?,version=version+1,updated_at=?,activity_json=?,decline_reason=CASE WHEN ?='declined' THEN ? ELSE decline_reason END,paid_at=CASE WHEN ?='paid' THEN ? ELSE paid_at END,completed_at=CASE WHEN ?='complete' THEN ? ELSE completed_at END WHERE reference=? AND version=? AND status=?${stockGuard} RETURNING *`)
+      .bind(body.status, now, JSON.stringify(history), body.status, reason, body.status, now, body.status, now, body.reference, body.version, row.status,...stockArgs).first();
+    if (!updated) return reply({ error: 'This booking or available stock changed. Refresh and review Inventory before trying again.' }, 409);
     return reply({ ok: true, booking: toAdminBooking(updated) });
   } catch { console.error('admin_booking_update_failed'); return reply({ error: 'Could not save this action. Refresh to check its status before trying again.' }, 503); }
 }

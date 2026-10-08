@@ -3,12 +3,12 @@
 Process for every step: implement → test → user approval → GitHub push → next step.
 Do not push to GitHub or advance without user approval. Preserve the existing design unless a change is required by the current step.
 
-Last approved GitHub baseline: `6d1dedc94e2a35ceaa521afd5587f456d4334ed1` (`main`), pushed after owner confirmed live sign-in and approved proceeding.
+Last approved GitHub baseline: `f4ced52ed2b389c07d47eab0161eb6528a0dba98` (`main`), pushed after owner confirmed Step 2 works and approved proceeding on 8 October 2026.
 
 | Step | Scope | Status | Test evidence | Approval / GitHub commit |
 | --- | --- | --- | --- | --- |
 | 1 | Admin sign-in and protected actions | Owner confirmed live sign-in; approved | Prior automated access/session/recovery checks passed; owner login confirmed | Approved; pushed 6d1dedc |
-| 2 | Real customer orders in Admin | Implemented; testing and owner acceptance in progress | Isolated production-route integration passed; see docs/admin-bookings-testing.md | Not yet approved for GitHub |
+| 2 | Real customer orders in Admin | Implemented; owner accepted | Isolated integration passed; live requests and tracking matched; owner confirmed it works | Approved; pushed f4ced52 including loading fix |
 | 3 | Persistent admin changes | Included in Step 2 integration | Atomic saved transitions, version checks and activity history tested | Same acceptance gate as Step 2 |
 | 4 | Customer tracking updates | Included in Step 2 integration | Saved statuses and decline reason tested; visible-page refresh added | Same acceptance gate as Step 2 |
 | 5 | Payment integration | Not started | — | — |
@@ -89,3 +89,15 @@ Last approved GitHub baseline: `6d1dedc94e2a35ceaa521afd5587f456d4334ed1` (`main
 - Existing historical payments/completions lack event timestamps; do not invent dates or backfill them from unrelated updates.
 - Test records exist only in isolated in-memory SQLite. No production customer booking or payment was altered by the agent.
 - Do not push Step 2 to GitHub until owner acceptance. Do not begin payment or inventory work without the next approval.
+
+## Inventory — next approved step, 8 October 2026
+
+- Owner confirmed Step 2 works and approved GitHub push plus starting Inventory; previous pending-approval notes above are historical.
+- GitHub main successfully advanced from 6d1dedc to f4ced52.
+- Preserve existing Inventory design. Connect equipment quantities and availability to durable records and booking lifecycle.
+- Owner confirmed usable stock: 20 Classic hookahs, 20 Premium hookahs, 10 coal stoves, 20 tongs; all unavailable counts zero. These replace the earlier example quantities once only; future edits are preserved.
+- Implemented durable authenticated inventory reads/edits, version conflict protection, whole-number validation, active booking allocations and atomic approval stock checks. Existing design/customer pricing unchanged.
+- Approved/payment-review/paid reserves equipment; handover/returned is out; completion releases stock. This is conservative stock holding until completion, NOT date-based reuse. One tong per hookah means 20 tongs can support at most 20 simultaneous hookahs.
+- Isolated actual-route integration passed: initialization, durable edits, stale/invalid/unauthorized/CSRF rejection, below-held edits, full lifecycle, competing approvals and outage responses. No production booking/payment was changed for tests.
+- Auth regression tests passed. Local login renders; authenticated browser acceptance requires owner sign-in. Existing unrelated TypeScript errors in checkout/payment/DB typing remain outside this change.
+- Inventory owner acceptance and GitHub push remain pending. Do not advance to another feature or push Inventory without acceptance.

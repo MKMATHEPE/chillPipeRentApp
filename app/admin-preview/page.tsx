@@ -6,7 +6,8 @@ import AdminSignOut from '@/components/admin-sign-out';
 import { ArrowLeft, ArrowUpRight, Check, CalendarDays, ChevronRight, ClipboardList, Package, Inbox, MapPin, Phone, Truck, ChartNoAxesColumnIncreasing } from 'lucide-react';
 import Performance from './performance';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import Inventory, { demoEquipment, equipmentAllocation, type EquipmentId, type Allocation } from './inventory';
+import Inventory from './inventory';
+import { requirements, type Equipment, type InventorySnapshot } from '@/lib/inventory';
 import BookingCalendar, { localDate } from './booking-calendar';
 import './preview.css';
 import './client-style.css';
@@ -19,8 +20,8 @@ const nextStatus: Partial<Record<Status, Status>> = { Approved: 'Handover', Hand
 
 export default function AdminPreview() {
   const [bookings, setBookings] = useState<Booking[]>([]);
-  const [equipment, setEquipment] = useState(demoEquipment);
-  const allocations = Object.fromEntries(equipment.map(item => [item.id, equipmentAllocation(bookings, item.id)])) as Record<EquipmentId, Allocation>;
+  const [inventory, setInventory] = useState<InventorySnapshot | null>(null);
+  const [inventoryError, setInventoryError] = useState('');
   const [tab, setTab] = useState<'Requests' | 'Bookings' | 'Inventory' | 'Performance'>('Requests');
   const [filter, setFilter] = useState('All');
   const [bookingView, setBookingView] = useState<'Active' | 'History'>('Active');
@@ -62,6 +63,15 @@ export default function AdminPreview() {
       if (count) setNotice(`${count} new booking request${count === 1 ? '' : 's'} received.`);
       seen.current = new Set(all.map(b => b.id));
       setBookings(all); setLoadError('');
+      try {
+        const response = await fetch('/api/admin/inventory', {cache:'no-store',signal:abort.signal});
+        if (response.status === 401) { window.location.href = '/admin-login'; return; }
+        const data = await response.json() as InventorySnapshot & {error?: string};
+        if (!response.ok) throw new Error(data.error || 'Inventory unavailable.');
+        if (!abort.signal.aborted && current === generation.current) { setInventory(data); setInventoryError(''); }
+      } catch (error) {
+        if (!abort.signal.aborted) setInventoryError(error instanceof Error ? error.message : 'Inventory unavailable.');
+      }
     } catch (error) {
       if (!abort.signal.aborted) setLoadError(error instanceof Error ? error.message : 'Bookings unavailable. Retry.');
     } finally { if (controller.current === abort) fetching.current = false; if (!abort.signal.aborted) setLoading(false); }
@@ -87,7 +97,19 @@ export default function AdminPreview() {
   const activeBookings = bookings.filter(b => b.status !== 'Pending' && !isClosed(b));
   const displayed = isCalendar ? activeBookings.filter(b => b.rentalStart.slice(0, 10) === calendarDay).sort((a, b) => a.rentalStart.localeCompare(b.rentalStart)) : visible;
   const booking = displayed.find(b => b.id === selected) ?? displayed[0];
-  const shortages: string[] = []; // Live date-based inventory is a separate implementation step.
+  const needed = requirements(booking?.quantities || {});
+  const shortages = inventory?.equipment.filter(item => needed[item.id] > item.total-item.unavailable-inventory.allocations[item.id].reserved-inventory.allocations[item.id].out).map(item => item.name) ?? [];
+  async function saveInventory(item: Equipment) {
+    if (saveLock.current) throw new Error('Another action is saving. Please retry.');
+    saveLock.current = true; generation.current++; controller.current?.abort(); fetching.current = false;
+    try {
+      const response = await fetch('/api/admin/inventory', {method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify(item)});
+      if (response.status === 401) { window.location.href = '/admin-login'; throw new Error('Please sign in again.'); }
+      const data = await response.json() as InventorySnapshot & {error?: string};
+      if (!response.ok) throw new Error(data.error || 'Could not save inventory.');
+      setInventory(data); setInventoryError(''); setNotice(`${item.name}: inventory saved.`);
+    } finally { saveLock.current = false; void refresh(); }
+  }
   function changeTab(value: 'Requests' | 'Bookings' | 'Inventory' | 'Performance') { setTab(value); setBookingView('Active'); setSearch(''); setFilter('All'); setSelected(null); setMobileDetails(false); setNotice(''); window.scrollTo({ top: 0 }); }
   function changeView(value: 'Active' | 'History') { setBookingView(value); setFilter('All'); setSearch(''); setSelected(null); setMobileDetails(false); setNotice(''); }
   function startAction(value: Status | 'Paid') { actionTarget.current = booking ?? null; setActionError(''); setAction(value); }
@@ -95,7 +117,7 @@ export default function AdminPreview() {
     const booking = actionTarget.current;
     if (!booking || !action || saveLock.current || (action === 'Declined' && !reason.trim())) return;
     const statuses: Record<string, string> = { Approved: 'approved', Declined: 'declined', Paid: 'paid', Handover: 'handed_over', Returned: 'returned', Completed: 'complete' };
-    saveLock.current = true; generation.current++; controller.current?.abort(); setSaving(true); setActionError('');
+    saveLock.current = true; generation.current++; controller.current?.abort(); fetching.current = false; setSaving(true); setActionError('');
     try {
       const response = await fetch('/api/admin/bookings', { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ reference: booking.id, version: booking.version, status: statuses[action], reason }) });
       if (response.status === 401) { window.location.href = '/admin-login'; return; }
@@ -125,7 +147,8 @@ export default function AdminPreview() {
         {bookingView === 'History' && <div className="cp-history-search"><input type="search" aria-label="Search booking history" placeholder="Customer name or booking reference" value={search} onChange={e => { setSearch(e.target.value); setSelected(null); }} />{search && <button onClick={() => setSearch('')}>Clear</button>}</div>}
         {!isCalendar && <div className="cp-filters" aria-label="Filter bookings">{(bookingView === 'History' ? ['All', 'Completed', 'Declined', 'Cancelled'] : ['All', 'Approved', 'Handover', 'Returned', 'Unpaid']).map(f => <button key={f} aria-pressed={filter === f} onClick={() => { setFilter(f); setSelected(null); setMobileDetails(false); }}>{f}</button>)}</div>}
       </>}
-      {tab === 'Performance' ? <Performance bookings={bookings} /> : tab === 'Inventory' ? <><p className="cp-inventory-note">Inventory is not connected yet. Quantities below are examples; confirm availability manually before approval.</p><Inventory equipment={equipment} allocations={allocations} onSave={item => { setEquipment(all => all.map(e => e.id === item.id ? item : e)); setNotice(`${item.name}: inventory updated for this preview only.`); }} /></> : <div className={`cp-admin-workspace ${mobileDetails ? 'show-detail' : ''}`}>
+      {inventoryError && <p className="cp-stock-error" role="alert">{inventoryError} <button onClick={() => void refresh()}>Retry</button></p>}
+      {tab === 'Performance' ? <Performance bookings={bookings} /> : tab === 'Inventory' ? inventory ? <Inventory equipment={inventory.equipment} allocations={inventory.allocations} onSave={saveInventory} /> : <p role="status">{inventoryError ? 'Inventory could not be loaded.' : 'Loading inventory…'}</p> : <div className={`cp-admin-workspace ${mobileDetails ? 'show-detail' : ''}`}>
         <section className="cp-booking-list" aria-label={tab}>
           {displayed.map(b => <button className="cp-booking-row cp-compact-card" key={b.id} onClick={() => { setSelected(b.id); setMobileDetails(true); window.scrollTo({ top: 0 }); }}>
             <div className="cp-compact-top"><h2>{b.name}</h2><strong>{money(total(b))}</strong></div>

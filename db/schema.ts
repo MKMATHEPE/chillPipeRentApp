@@ -1,5 +1,14 @@
 import { integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 
+export const equipment = sqliteTable('equipment', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  total: integer('total').notNull(),
+  unavailable: integer('unavailable').notNull().default(0),
+  price: integer('price'), // Admin reference price in cents; customer catalogue unchanged.
+  version: integer('version').notNull().default(0),
+});
+
 export const adminSessions = sqliteTable('admin_sessions', {
   tokenHash: text('token_hash').primaryKey(),
   userId: text('user_id').notNull(),

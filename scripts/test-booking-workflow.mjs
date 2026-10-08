@@ -23,6 +23,8 @@ function load(file) {
     if (name.endsWith('/admin-auth')) return auth;
     if (name.endsWith('/admin-bookings')) return modules.bookings;
     if (name.endsWith('/payment-methods')) return modules.payment;
+    if (name.endsWith('/inventory-server')) return modules.inventoryServer;
+    if (name.endsWith('/inventory')) return modules.inventory;
     throw new Error('Unexpected import ' + name);
   };
   new Function('require', 'module', 'exports', source)(require, module, module.exports);
@@ -30,6 +32,9 @@ function load(file) {
 }
 modules.payment = load('lib/payment-methods.ts');
 modules.bookings = load('lib/admin-bookings.ts');
+modules.inventory = load('lib/inventory.ts');
+modules.inventoryServer = load('lib/inventory-server.ts');
+const inventory = load('app/api/admin/inventory/route.ts');
 const client = load('app/api/bookings/route.ts');
 const admin = load('app/api/admin/bookings/route.ts');
 const payment = load('app/api/bookings/payment/route.ts');
@@ -46,7 +51,15 @@ assert.equal(booking.items.reduce((sum, [, n]) => sum + n, booking.fee), 1910);
 assert.equal(booking.rentalStart, '2026-10-20T14:00'); assert.equal(booking.flavours, 'Mint × 3'); assert.match(booking.suggestions, /Mango × 2/); assert.equal(booking.notes, 'Unit 14');
 console.log('PASS customer request → saved database → admin details, quantities, flavours, fee, total and South Africa time');
 const patch = (status, version = booking.version, reason, origin) => admin.PATCH(req('/api/admin/bookings', { reference, status, version, reason }, 'PATCH', origin));
+const stock = async () => (await inventory.GET(req('/api/admin/inventory', undefined, 'GET'))).json();
+const editStock = item => inventory.PATCH(req('/api/admin/inventory', item, 'PATCH'));
+let snapshot = await stock();
+assert.deepEqual(snapshot.equipment.map(e => e.total), [20,20,10,20]);
+assert.ok(snapshot.equipment.every(e => e.unavailable === 0));
+console.log('PASS confirmed usable stock initializes once: 20 Classic, 20 Premium, 10 stoves, 20 tongs');
 authenticated = false;
+assert.equal((await inventory.GET(req('/api/admin/inventory',undefined,'GET'))).status,401);
+assert.equal((await editStock(snapshot.equipment[0])).status,401);
 assert.equal((await admin.GET(req('/api/admin/bookings', undefined, 'GET'))).status, 401);
 assert.equal((await patch('approved')).status, 401); authenticated = true;
 assert.equal((await patch('approved', 0, '', 'https://evil.example')).status, 403);
@@ -61,6 +74,11 @@ for (const status of ['approved', 'paid', 'handed_over', 'returned', 'complete']
   assert.equal(updated.version, booking.version + 1);
   assert.equal((await patch(status)).status, 409); // stale/double-click request
   booking = updated;
+  snapshot = await stock();
+  const expected = ['approved','paid'].includes(status) ? {reserved:1,out:0} : ['handed_over','returned'].includes(status) ? {reserved:0,out:1} : {reserved:0,out:0};
+  assert.deepEqual(snapshot.allocations.classic,expected);
+  assert.deepEqual(snapshot.allocations.tongs,{reserved:expected.reserved*2,out:expected.out*2});
+  if (status === 'approved') assert.equal((await editStock({...snapshot.equipment[0],total:0})).status,409);
   const tracked = await client.GET(req(`/api/bookings?reference=${reference}&phone=0000000000`, undefined, 'GET'));
   assert.equal(tracked.headers.get('cache-control'), 'no-store');
   assert.equal((await tracked.json()).status, status);
@@ -94,7 +112,29 @@ const next = await (await admin.GET(req('/api/admin/bookings?before=' + page.nex
 assert.equal(next.bookings.length, 3); assert.equal(next.nextCursor, null);
 assert.equal(new Set([...page.bookings, ...next.bookings].map(b => b.id)).size, 103);
 console.log('PASS pagination includes older bookings without duplicates');
+snapshot = await stock();
+let classic = snapshot.equipment.find(e => e.id === 'classic');
+assert.equal((await inventory.PATCH(req('/api/admin/inventory',classic,'PATCH','https://evil.example'))).status,403);
+for (const invalid of [{total:-1},{total:1.5},{unavailable:9999},{price:0},{price:1.001},{version:-1}])
+  assert.equal((await editStock({...classic,...invalid})).status,400);
+assert.equal((await editStock({...classic,total:25,unavailable:2})).status,200);
+assert.equal((await editStock({...classic,total:26})).status,409);
+snapshot = await stock();
+classic = snapshot.equipment.find(e => e.id === 'classic');
+assert.equal(classic.total,25); assert.equal(classic.unavailable,2); assert.equal(classic.version,1);
+assert.equal((await stock()).equipment.find(e => e.id === 'classic').total,25);
+console.log('PASS inventory edits persist, initialization never overwrites edits; invalid/stale/unauthorized writes and reductions below holds rejected');
+// One earlier paid rental holds two tongs. Leave exactly two more available.
+const tongs = snapshot.equipment.find(e => e.id === 'tongs');
+assert.equal((await editStock({...tongs,total:4})).status,200);
+const contenders = (await fetchAdmin()).filter(b => b.status === 'Pending').slice(0,2);
+const outcomes = await Promise.all(contenders.map(b => admin.PATCH(req('/api/admin/bookings',{reference:b.id,version:b.version,status:'approved'},'PATCH'))));
+assert.deepEqual(outcomes.map(r => r.status).sort(),[200,409]);
+assert.equal((await stock()).allocations.tongs.reserved,4);
+console.log('PASS competing approvals cannot overbook tongs; quantities use real customer orders, not demo references');
 unavailable = true;
+assert.equal((await inventory.GET(req('/api/admin/inventory',undefined,'GET'))).status,503);
+assert.equal((await editStock(classic)).status,503);
 assert.equal((await admin.GET(req('/api/admin/bookings', undefined, 'GET'))).status, 503);
 assert.equal((await patch('paid')).status, 503);
 console.log('PASS unavailable database returns recoverable errors, not success');
