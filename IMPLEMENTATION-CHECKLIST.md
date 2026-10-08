@@ -125,3 +125,11 @@ Last approved GitHub baseline: `f4ced52ed2b389c07d47eab0161eb6528a0dba98` (`main
 - Isolated tests cover exact totals, charts, dates/midnight, invalid/reversed/future dates, repeat customers, quantities, undated history, duplicate records and actual saved booking lifecycle → reporting. No production customer/payment data was modified for tests.
 - Owner approved the Performance update on 8 October 2026 and authorized its GitHub push. Approved implementation: `ad5cd1527c85a7e44ceeec89d29fb8d4d6af0e23`, published as Sites version 102. Earlier pending-approval notes are historical; this acceptance does not claim additional agent-run browser tests.
 - No next feature started. Continue the agreed implement → test → owner approval → GitHub process for the next selected step.
+
+## Server-side rental price validation — 8 October 2026
+
+- Price update (Classic R650 / Premium R850) approved and pushed to GitHub at `dbfc9e6`, Sites version 103.
+- Yoco integration paused pending written merchant eligibility for tobacco-based flavours.
+- Owner authorized server-side rental price validation. Implemented independent calculation, strict quantities/catalogue validation, stale-total rejection before writes, and trusted price snapshots for new bookings. No customer UI, historical records or database schema changed.
+- Automated pricing/booking/inventory/reporting tests passed; see `docs/booking-pricing-testing.md` for coverage and delivery-quote limitation.
+- Pending owner review and approval before this step is pushed to GitHub. Do not start another feature automatically.

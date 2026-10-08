@@ -1,5 +1,6 @@
 import { getDb } from '../../../db';
 import { isPaymentMethod } from '@/lib/payment-methods';
+import { BookingInputError, priceBooking } from '@/lib/booking-pricing';
 
 const json = (data: unknown, status = 200) => Response.json(data, { status, headers: { 'Cache-Control': 'no-store' } });
 const clean = (value: unknown, max = 200) =>
@@ -8,7 +9,9 @@ const clean = (value: unknown, max = 200) =>
     .slice(0, max);
 export async function POST(request: Request) {
   try {
-    const body = (await request.json()) as Record<string, any>;
+    let body: Record<string, any>;
+    try { body = await request.json(); } catch { return json({ error: 'Invalid booking request.' }, 400); }
+    if (!body || typeof body !== 'object' || Array.isArray(body)) return json({ error: 'Invalid booking request.' }, 400);
     if (!isPaymentMethod(body.paymentMethod))
       return json({ error: 'Choose a payment method before checkout.' }, 400);
     const customer = body.customer || {};
@@ -21,21 +24,9 @@ export async function POST(request: Request) {
         { error: 'Name, phone, rental date and location are required.' },
         400,
       );
-    const pipeQty = Math.max(
-      0,
-      Math.min(10, Number(body.quantities?.pipe) || 0),
-    );
-    const premiumQty = Math.max(
-      0,
-      Math.min(10, Number(body.quantities?.premium) || 0),
-    );
-    if (!pipeQty && !premiumQty)
-      return json({ error: 'Add at least one hookah.' }, 400);
+    const priced = priceBooking(body);
     const reference = `CP-${crypto.randomUUID().slice(0, 6).toUpperCase()}`;
-    const total = Math.max(0, Math.round(Number(body.total) || 0));
-    const deliveryFee = body.delivery ? Number(body.deliveryFee) : 0;
-    if (body.delivery && deliveryFee !== 250 && deliveryFee !== 350)
-      return json({ error: 'Calculate the delivery fee before checkout.' }, 400);
+    const { total, deliveryFee } = priced;
     // Retain the column for historical records; new rentals require no deposit.
     const deposit = 0;
     const now = Date.now();
@@ -51,9 +42,11 @@ export async function POST(request: Request) {
         location,
         clean(customer.notes, 500),
         JSON.stringify({
-          quantities: body.quantities || {},
-          selectedFlavours: body.selectedFlavours || [],
-          suggestedFlavours: body.suggestedFlavours || [],
+          quantities: priced.quantities,
+          selectedFlavours: priced.selectedFlavours,
+          suggestedFlavours: priced.suggestedFlavours,
+          unitPrices: priced.unitPrices,
+          extraFlavourPrice: priced.extraFlavourPrice,
           delivery: Boolean(body.delivery),
           deliveryDistanceKm: Number(body.deliveryDistanceKm) || 0,
         }),
@@ -70,7 +63,7 @@ export async function POST(request: Request) {
         reference,
         status: 'awaiting_review',
         paymentMethod: body.paymentMethod,
-        quantities: body.quantities || {},
+        quantities: priced.quantities,
         delivery: Boolean(body.delivery),
         total,
         deposit,
@@ -80,6 +73,7 @@ export async function POST(request: Request) {
       201,
     );
   } catch (error) {
+    if (error instanceof BookingInputError) return json({ error: error.message }, error.status);
     console.error(error);
     return json(
       { error: 'We could not save your booking. Please try again.' },

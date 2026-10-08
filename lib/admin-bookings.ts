@@ -22,10 +22,10 @@ const flavourText = (value: any) => list(value).map(item => typeof item === 'str
 export function toAdminBooking(row: Record<string, any>): AdminBooking {
   const order = parse(row.order_json, {});
   const quantities = order.quantities || {};
-  const items: [string, number][] = Object.entries(prices).filter(([key]) => Number(quantities[key]) > 0).map(([key, price]) => [`${names[key]} × ${quantities[key]}`, price * Number(quantities[key])]);
+  const items: [string, number][] = Object.entries(prices).filter(([key]) => Number(quantities[key]) > 0).map(([key, price]) => [`${names[key]} × ${quantities[key]}`, (order.unitPrices?.[key] ?? price) * Number(quantities[key])]);
   const units = list(order.selectedFlavours).reduce((sum: number, item: any) => sum + (typeof item === 'string' ? 1 : Number(item.quantity) || 0), 0);
   const extra = Math.max(0, units - (Number(quantities.pipe) || 0) - (Number(quantities.premium) || 0));
-  if (extra) items.push([`Additional flavour units × ${extra}`, extra * 50]);
+  if (extra) items.push([`Additional flavour units × ${extra}`, extra * (order.extraFlavourPrice ?? 50)]);
   // Keep the stored total authoritative when historical pricing differs.
   const difference = Number(row.rental_total) - items.reduce((sum, [, price]) => sum + price, 0);
   if (difference) items.push(['Recorded pricing adjustment', difference]);

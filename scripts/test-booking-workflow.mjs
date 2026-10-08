@@ -23,6 +23,7 @@ function load(file) {
     if (name.endsWith('/admin-auth')) return auth;
     if (name.endsWith('/admin-bookings')) return modules.bookings;
     if (name.endsWith('/payment-methods')) return modules.payment;
+    if (name.endsWith('/booking-pricing')) return modules.pricing;
     if (name.endsWith('/inventory-server')) return modules.inventoryServer;
     if (name.endsWith('/inventory')) return modules.inventory;
     throw new Error('Unexpected import ' + name);
@@ -31,6 +32,7 @@ function load(file) {
   return module.exports;
 }
 modules.payment = load('lib/payment-methods.ts');
+modules.pricing = load('lib/booking-pricing.ts');
 modules.bookings = load('lib/admin-bookings.ts');
 modules.performance = load('lib/performance.ts');
 modules.inventory = load('lib/inventory.ts');
@@ -40,7 +42,45 @@ const client = load('app/api/bookings/route.ts');
 const admin = load('app/api/admin/bookings/route.ts');
 const payment = load('app/api/bookings/payment/route.ts');
 const req = (path, body, method = 'POST', origin = 'https://app.example') => new Request('https://app.example' + path, { method, headers: { origin, 'content-type': 'application/json' }, ...(body === undefined ? {} : { body: JSON.stringify(body) }) });
-const order = { customer: { name: 'Workflow test', phone: '0000000000', date: '2026-10-20T14:00', location: 'Test address', notes: 'Unit 14' }, quantities: { pipe: 1, premium: 1, coalPack: 2, stove: 1 }, selectedFlavours: [{ name: 'Mint', quantity: 3 }], suggestedFlavours: [{ name: 'Mango', quantity: 2, details: 'Test brand' }], total: 1660, delivery: true, deliveryFee: 250, paymentMethod: 'cash_on_delivery' };
+const order = { customer: { name: 'Workflow test', phone: '0000000000', date: '2026-10-20T14:00', location: 'Test address', notes: 'Unit 14' }, quantities: { pipe: 1, premium: 1, coalPack: 2, stove: 1 }, selectedFlavours: [{ name: 'Gum & Mint', quantity: 3 }], suggestedFlavours: [{ name: 'Mango', quantity: 2, details: 'Test brand' }], total: 1810, delivery: true, deliveryFee: 250, paymentMethod: 'cash_on_delivery' };
+// Pricing failures must not create even a partial booking.
+for (const invalid of [
+  {total:0}, {total:1660}, {total:1811}, {total:'1810'}, {total:null}, {total:1810.5},
+  {quantities:{pipe:-1}}, {quantities:{pipe:1.5}}, {quantities:{pipe:'1'}}, {quantities:{pipe:null}},
+  {quantities:{pipe:11}}, {quantities:{pipe:1,stove:-1}}, {quantities:{pipe:1,coalPack:11}},
+  {quantities:{pipe:0,premium:0}}, {quantities:{pipe:1,discount:100}}, {quantities:[]},
+  {selectedFlavours:[{name:'Gum & Mint',quantity:-1}]}, {selectedFlavours:[{name:'Gum & Mint',quantity:0}]},
+  {selectedFlavours:[{name:'Gum & Mint',quantity:1.5}]}, {selectedFlavours:[{name:'Gum & Mint',quantity:'3'}]},
+  {selectedFlavours:[{name:'Gum & Mint',quantity:Number.MAX_SAFE_INTEGER}]},
+  {selectedFlavours:[{name:'Unknown flavour',quantity:3}]}, {selectedFlavours:{}},
+  {suggestedFlavours:[{name:'Mango',quantity:-2}]}, {delivery:'false'}, {deliveryFee:0}, {deliveryFee:'250'},
+]) {
+  const result = await client.POST(req('/api/bookings',{...order,...invalid}));
+  assert.ok([400,409].includes(result.status),JSON.stringify(invalid));
+  assert.equal(sql.prepare('SELECT count(*) AS n FROM bookings').get().n,0);
+}
+for (const malformed of ['{', 'null', '[]']) {
+  assert.equal((await client.POST(new Request('https://app.example/api/bookings',{method:'POST',body:malformed}))).status,400);
+}
+assert.equal(modules.pricing.priceBooking({...order,selectedFlavours:['Gum & Mint','Gum & Mint','Gum & Mint']}).total,1810);
+assert.equal(modules.pricing.priceBooking({...order,selectedFlavours:[{name:'Gum & Mint',quantity:1},{name:'Gum & Mint',quantity:2}]}).selectedFlavours[0].quantity,3);
+assert.equal(modules.pricing.priceBooking({...order,selectedFlavours:[{name:'Gum & Mint',quantity:100}],total:6660}).total,6660);
+console.log('PASS tampered/stale totals, invalid/unknown quantities, malformed requests, legacy/duplicate flavours and unlimited valid flavour quantities');
+for (const [quantities,selectedFlavours,total] of [
+  [{pipe:1},[],650], [{premium:1},['Lady Killer'],850],
+  [{pipe:1},[{name:'Lady Killer',quantity:3}],750],
+  [{pipe:1,premium:1},['Lady Killer','Gum & Mint'],1500],
+  [{pipe:1,coalPack:2,stove:1},['Lady Killer'],910],
+]) {
+  const priced = modules.pricing.priceBooking({...order,quantities,selectedFlavours,total,delivery:false,deliveryFee:350,unitPrices:{pipe:1},deposit:999,extraFlavourPrice:0});
+  assert.equal(priced.total,total); assert.equal(priced.deliveryFee,0); assert.equal(priced.unitPrices.pipe,650);
+}
+const historical = modules.bookings.toAdminBooking({reference:'OLD',phone:'000',rental_date:'2026-01-01T12:00',order_json:JSON.stringify({quantities:{pipe:1}}),rental_total:550,deposit:0,delivery_fee:0,status:'complete'});
+assert.equal(historical.items.reduce((sum,[,n])=>sum+n,0),550);
+const homeSource=readFileSync('app/page.tsx','utf8'),checkoutSource=readFileSync('app/checkout/page.tsx','utf8');
+for (const [key,value] of Object.entries(modules.pricing.RENTAL_PRICES)) assert.match(checkoutSource,new RegExp(key+': '+value));
+assert.ok(homeSource.includes('pipeQty * 650')); assert.ok(homeSource.includes('premiumQty * 850'));
+console.log('PASS single/mixed hookahs, included flavours, extra coal packs/stoves, unpriced suggestions, ignored injected prices, zero collection fee, historical totals and client/server price parity');
 let response = await client.POST(req('/api/bookings', order));
 assert.equal(response.status, 201);
 const created = await response.json();
@@ -48,8 +88,12 @@ const reference = created.reference;
 const fetchAdmin = async () => (await (await admin.GET(req('/api/admin/bookings', undefined, 'GET'))).json()).bookings;
 let booking = (await fetchAdmin())[0];
 assert.equal(booking.id, reference); assert.equal(booking.status, 'Pending'); assert.equal(booking.name, order.customer.name);
-assert.equal(booking.items.reduce((sum, [, n]) => sum + n, booking.fee), 1910);
-assert.equal(booking.rentalStart, '2026-10-20T14:00'); assert.equal(booking.flavours, 'Mint × 3'); assert.match(booking.suggestions, /Mango × 2/); assert.equal(booking.notes, 'Unit 14');
+assert.equal(booking.items.reduce((sum, [, n]) => sum + n, booking.fee), 2060);
+assert.equal(booking.rentalStart, '2026-10-20T14:00'); assert.equal(booking.flavours, 'Gum & Mint × 3'); assert.match(booking.suggestions, /Mango × 2/); assert.equal(booking.notes, 'Unit 14');
+const savedOrder = JSON.parse(sql.prepare('SELECT order_json FROM bookings WHERE reference=?').get(reference).order_json);
+assert.deepEqual(savedOrder.unitPrices,{pipe:650,premium:850,coalPack:30,stove:200});
+assert.equal(savedOrder.extraFlavourPrice,50);
+assert.equal(booking.items.some(([name])=>name==='Recorded pricing adjustment'),false);
 console.log('PASS customer request → saved database → admin details, quantities, flavours, fee, total and South Africa time');
 const patch = (status, version = booking.version, reason, origin) => admin.PATCH(req('/api/admin/bookings', { reference, status, version, reason }, 'PATCH', origin));
 const stock = async () => (await inventory.GET(req('/api/admin/inventory', undefined, 'GET'))).json();
@@ -107,9 +151,9 @@ assert.equal((await admin.PATCH(req('/api/admin/bookings', { reference: third, v
 console.log('PASS customer payment notification requires manual admin verification and protects against stale updates');
 const reportDate = modules.performance.reportDay(Date.now());
 const liveResults = modules.performance.performanceReport(await fetchAdmin(),reportDate,reportDate,reportDate);
-assert.equal(liveResults.received,3820);assert.equal(liveResults.completed.length,1);assert.equal(liveResults.handedOver.length,1);
+assert.equal(liveResults.received,4120);assert.equal(liveResults.completed.length,1);assert.equal(liveResults.handedOver.length,1);
 assert.deepEqual(liveResults.quantities,{Classic:1,Premium:1});
-assert.equal(liveResults.bars.reduce((s,b)=>s+b.money,0),3820);
+assert.equal(liveResults.bars.reduce((s,b)=>s+b.money,0),4120);
 console.log('PASS actual saved booking/payment/handover/completion events feed accurate Performance totals and chart');
 // Enough isolated records to exercise pagination; nothing reaches production.
 for (let n = 0; n < 100; n++) await client.POST(req('/api/bookings', order));
@@ -143,7 +187,7 @@ console.log('PASS competing approvals cannot overbook tongs; quantities use real
 sql.exec('DELETE FROM bookings');
 sql.exec('UPDATE equipment SET total=2,unavailable=0');
 const dated = async (date, count = 1) => {
-  const res = await client.POST(req('/api/bookings',{...order,customer:{...order.customer,date},quantities:{pipe:count,premium:0,stove:0,coalPack:0}}));
+  const res = await client.POST(req('/api/bookings',{...order,customer:{...order.customer,date},quantities:{pipe:count,premium:0,stove:0,coalPack:0},total:count*650+Math.max(0,3-count)*50}));
   assert.equal(res.status,201);
   return (await res.json()).reference;
 };
