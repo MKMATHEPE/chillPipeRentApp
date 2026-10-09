@@ -2,6 +2,7 @@ import { getDb } from '../../../db';
 import { isPaymentMethod } from '@/lib/payment-methods';
 import { BookingInputError, priceBooking } from '@/lib/booking-pricing';
 import { verifyDeliveryQuote } from '@/lib/delivery-quotes';
+import { expirePendingBookings } from '@/lib/booking-expiry';
 
 const json = (data: unknown, status = 200) => Response.json(data, { status, headers: { 'Cache-Control': 'no-store' } });
 const clean = (value: unknown, max = 200) =>
@@ -92,6 +93,7 @@ export async function GET(request: Request) {
     const phone = clean(url.searchParams.get('phone'), 40);
     if (!reference || !phone)
       return json({ error: 'Reference and phone number are required.' }, 400);
+    await expirePendingBookings();
     const row = await getDb()
       .prepare(
         `SELECT reference,status,decline_reason AS declineReason,rental_total AS total,deposit,delivery_fee AS deliveryFee,customer_name AS customerName,phone,rental_date AS rentalDate,location,order_json AS orderJson,payment_method AS paymentMethod,created_at AS createdAt,updated_at AS updatedAt FROM bookings WHERE reference=? AND phone=? LIMIT 1`,

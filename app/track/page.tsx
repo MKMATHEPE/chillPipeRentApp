@@ -89,7 +89,7 @@ export default function Track() {
     else setLoading(false);
   }, []);
   useEffect(() => {
-    if (!booking || ['complete', 'cancelled', 'declined'].includes(booking.status)) return;
+    if (!booking || ['complete', 'cancelled', 'declined', 'expired'].includes(booking.status)) return;
     let active = true;
     let timer: ReturnType<typeof setTimeout>;
     const tick = async () => {
@@ -163,6 +163,7 @@ export default function Track() {
     handed_over: ['Rental in progress', 'Enjoy your session. Return your equipment at the agreed time.'],
     returned: ['Equipment returned', 'The owner will inspect the returned equipment.'],
     complete: ['Rental completed', 'Your equipment has been returned and inspected.'],
+    expired: ['Request expired', 'Your requested rental time passed without confirmation. Please submit a new booking.'],
     cancelled: ['Booking cancelled', 'Contact us if you need help with this booking.'],
     declined: ['Booking declined', booking.declineReason || 'Contact us if you need help with this booking.'],
   } as Record<string, string[]>)[booking.status] || ['Booking status', 'Refresh to check for an update.'];
@@ -175,6 +176,7 @@ export default function Track() {
         <div className="sheet-handle" />
         <h1>{heading}</h1>
         <p aria-live="polite">{description}</p>
+        {booking.status === 'expired' && <a href="/">Start a new booking</a>}
         <section className="status-layout">
           {booking.status !== 'cancelled' && booking.status in rank && (
             <section className="booking-progress" aria-label="Your booking journey">

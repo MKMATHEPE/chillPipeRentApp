@@ -1,6 +1,6 @@
 import { paymentLabel } from './payment-methods';
 
-export type Status = 'Pending' | 'Approved' | 'Handover' | 'Returned' | 'Completed' | 'Declined' | 'Cancelled';
+export type Status = 'Pending' | 'Approved' | 'Handover' | 'Returned' | 'Completed' | 'Declined' | 'Cancelled' | 'Expired';
 export type AdminBooking = {
   id: string; version: number; rawStatus: string; customerId: string; name: string; phone: string;
   rentalStart: string; date: string; mode: string; address: string; payment: string; paid: boolean;
@@ -8,7 +8,7 @@ export type AdminBooking = {
   items: [string, number][]; fee: number; reason?: string; history: string[];
   flavours: string; suggestions: string; notes: string; quantities: Record<string, number>;
 };
-const labels: Record<string, Status> = { awaiting_review: 'Pending', approved: 'Approved', payment_review: 'Approved', paid: 'Approved', handed_over: 'Handover', returned: 'Returned', complete: 'Completed', declined: 'Declined', cancelled: 'Cancelled' };
+const labels: Record<string, Status> = { awaiting_review: 'Pending', approved: 'Approved', payment_review: 'Approved', paid: 'Approved', handed_over: 'Handover', returned: 'Returned', complete: 'Completed', declined: 'Declined', cancelled: 'Cancelled', expired: 'Expired' };
 export const transition: Record<string, string[]> = {
   awaiting_review: ['approved', 'declined'], approved: ['paid'], payment_review: ['paid'],
   paid: ['handed_over'], handed_over: ['returned'], returned: ['complete'],
@@ -44,7 +44,7 @@ export function toAdminBooking(row: Record<string, any>): AdminBooking {
     payment: paymentLabel(row.payment_method), paid: ['paid', 'handed_over', 'returned', 'complete'].includes(row.status),
     paidAt: row.paid_at ?? undefined, completedAt: row.completed_at ?? undefined,
     handedOverAt: list(parse(row.activity_json, [])).find((entry: any) => entry?.label === 'Handover' && typeof entry.at === 'number' && Number.isFinite(entry.at))?.at,
-    closedAt: ['complete', 'declined', 'cancelled'].includes(row.status) ? row.updated_at : undefined,
+    closedAt: ['complete', 'declined', 'cancelled', 'expired'].includes(row.status) ? row.updated_at : undefined,
     status: labels[row.status] || 'Pending', items, fee: Number(row.delivery_fee) || 0,
     reason: row.decline_reason || undefined, history: ['Request received', ...history],
     flavours: flavourText(order.selectedFlavours) || 'None selected', suggestions: flavourText(order.suggestedFlavours), notes: row.notes || '', quantities,

@@ -25,6 +25,7 @@ function load(file) {
     if (name.endsWith('/payment-methods')) return modules.payment;
     if (name.endsWith('/booking-pricing')) return modules.pricing;
     if (name.endsWith('/delivery-quotes')) return modules.deliveryQuotes;
+    if (name.endsWith('/booking-expiry')) return modules.expiry;
     if (name.endsWith('/inventory-server')) return modules.inventoryServer;
     if (name.endsWith('/inventory')) return modules.inventory;
     throw new Error('Unexpected import ' + name);
@@ -35,6 +36,7 @@ function load(file) {
 modules.payment = load('lib/payment-methods.ts');
 modules.pricing = load('lib/booking-pricing.ts');
 modules.deliveryQuotes = load('lib/delivery-quotes.ts');
+modules.expiry = load('lib/booking-expiry.ts');
 modules.bookings = load('lib/admin-bookings.ts');
 modules.performance = load('lib/performance.ts');
 modules.inventory = load('lib/inventory.ts');
@@ -287,6 +289,46 @@ const separateRace = await Promise.all([act(boundary1,'approved'),act(boundary2,
 assert.deepEqual(separateRace.map(r => r.status),[200,200]);
 assert.equal((await stock()).allocations.classic.reserved,1);
 console.log('PASS simultaneous separate-date approvals, month boundary and server UTC/South Africa equivalence');
+// Frozen clock verifies expiry at rental start, not 24 hours later.
+sql.exec('DELETE FROM bookings');
+const originalNow = Date.now;
+const cutoff = Date.parse('2099-05-01T08:00:00Z');
+sql.prepare('UPDATE delivery_quotes SET expires_at=? WHERE id=?').run(cutoff+3600000,nearQuote.quoteId);
+Date.now = () => cutoff - 1000;
+const due = await dated('2099-05-01T10:00');
+const utcDue = await dated('2099-05-01T08:00Z');
+const futurePending = await dated('2099-05-01T10:01');
+const approvedSafe = await dated('2099-05-01T10:00');
+const paidSafe = await dated('2099-05-01T10:00');
+sql.prepare("UPDATE bookings SET status='approved' WHERE reference=?").run(approvedSafe);
+sql.prepare("UPDATE bookings SET status='paid',paid_at=? WHERE reference=?").run(cutoff-1000,paidSafe);
+assert.equal((await fetchAdmin()).find(b=>b.id===due).status,'Pending');
+Date.now = () => cutoff;
+const afterExpiry = await fetchAdmin();
+for(const ref of [due,utcDue]) {
+  const b=afterExpiry.find(b=>b.id===ref);
+  assert.equal(b.status,'Expired'); assert.equal(b.closedAt,cutoff); assert.equal(b.version,1); assert.equal(b.paid,false);
+  assert.equal(b.history.filter(entry=>entry.startsWith('Request expired')).length,1);
+}
+assert.equal(afterExpiry.find(b=>b.id===futurePending).status,'Pending');
+assert.equal(afterExpiry.find(b=>b.id===approvedSafe).rawStatus,'approved');
+assert.equal(afterExpiry.find(b=>b.id===paidSafe).rawStatus,'paid');
+assert.equal((await act(due,'approved')).status,409);
+assert.equal((await act(due,'paid')).status,409);
+await fetchAdmin();
+assert.equal(sql.prepare('SELECT version FROM bookings WHERE reference=?').get(due).version,1);
+const trackedExpired = await (await client.GET(req('/api/bookings?reference='+due+'&phone=0000000000',undefined,'GET'))).json();
+assert.equal(trackedExpired.status,'expired');
+const expiryReport=modules.performance.performanceReport(await fetchAdmin(),'2099-05-01','2099-05-01','2099-05-01');
+assert.equal(expiryReport.expired.length,2); assert.equal(expiryReport.completed.length,0);
+const onlyExpired=modules.performance.performanceReport(afterExpiry.filter(b=>b.status==='Expired'),'2099-05-01','2099-05-01','2099-05-01');
+assert.equal(onlyExpired.received,0);
+// A stale approval request after crossing the cutoff also expires before mutation.
+Date.now=()=>cutoff+60000;
+assert.equal((await act(futurePending,'approved')).status,409);
+assert.equal(sql.prepare('SELECT status FROM bookings WHERE reference=?').get(futurePending).status,'expired');
+Date.now=originalNow;
+console.log('PASS exact-start expiry, SA/UTC equivalence, future/approved/paid protection, idempotent history, late-action rejection, customer tracking and separate Performance count');
 unavailable = true;
 assert.equal((await inventory.GET(req('/api/admin/inventory',undefined,'GET'))).status,503);
 assert.equal((await editStock(classic)).status,503);

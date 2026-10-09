@@ -1,6 +1,6 @@
 import type { AdminBooking } from './admin-bookings';
 
-export type ReportBooking = Pick<AdminBooking,'id'|'version'|'customerId'|'status'|'paid'|'paidAt'|'handedOverAt'|'completedAt'|'items'|'fee'|'quantities'>;
+export type ReportBooking = Pick<AdminBooking,'id'|'version'|'customerId'|'status'|'paid'|'paidAt'|'handedOverAt'|'completedAt'|'closedAt'|'items'|'fee'|'quantities'>;
 const formatter = new Intl.DateTimeFormat('en-CA',{timeZone:'Africa/Johannesburg',year:'numeric',month:'2-digit',day:'2-digit'});
 export const reportDay = (time: number) => formatter.format(new Date(time));
 export const shiftDay = (key: string, days: number) => new Date(Date.parse(`${key}T12:00:00Z`)+days*86400000).toISOString().slice(0,10);
@@ -19,6 +19,7 @@ export function performanceReport(input: ReportBooking[],from: string,to: string
   const inside = (time?: number) => valid && validTime(time) && reportDay(time) >= from && reportDay(time) <= to;
   const paid = bookings.filter(b => b.paid && inside(b.paidAt));
   const completed = bookings.filter(b => b.status === 'Completed' && inside(b.completedAt));
+  const expired = bookings.filter(b => b.status === 'Expired' && inside(b.closedAt));
   const handedOver = bookings.filter(b => inside(b.handedOverAt));
   const quantities = {Classic:0,Premium:0};
   completed.forEach(b => { quantities.Classic += units(b.quantities.pipe); quantities.Premium += units(b.quantities.premium); });
@@ -31,5 +32,5 @@ export function performanceReport(input: ReportBooking[],from: string,to: string
     return {first,last,money:paid.filter(b => within(b.paidAt!)).reduce((sum,b) => sum+cents(b),0)/100,rentals:completed.filter(b => within(b.completedAt!)).length};
   });
   const undated = bookings.filter(b => (b.paid && !validTime(b.paidAt)) || (b.status === 'Completed' && !validTime(b.completedAt)) || (['Handover','Returned','Completed'].includes(b.status) && !validTime(b.handedOverAt))).length;
-  return {valid,paid,completed,handedOver,received:paid.reduce((sum,b) => sum+cents(b),0)/100,average:completed.length ? completed.reduce((sum,b) => sum+cents(b),0)/100/completed.length : null,quantities,returning,bars,group,undated};
+  return {valid,paid,completed,expired,handedOver,received:paid.reduce((sum,b) => sum+cents(b),0)/100,average:completed.length ? completed.reduce((sum,b) => sum+cents(b),0)/100/completed.length : null,quantities,returning,bars,group,undated};
 }

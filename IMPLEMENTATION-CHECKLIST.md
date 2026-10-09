@@ -143,3 +143,12 @@ Last approved GitHub baseline: `f4ced52ed2b389c07d47eab0161eb6528a0dba98` (`main
 - Isolated route tests pass for manual/pinned addresses, expiry/forgery/address and fee changes, exact threshold, map outage, collection, and existing booking/inventory/reporting flows. Mapping responses are mocked; external provider accuracy and authenticated browser acceptance remain manual checks.
 - New schema-only migration adds delivery_quotes; no historical orders changed. Quote cleanup/rate limiting is a future operational improvement, not implemented here.
 - Pending owner review before GitHub push of this delivery step.
+
+## Pending request expiry — 9 October 2026
+
+- User requested implementation: unapproved requests expire at their scheduled rental start, move to History, show a customer explanation and contribute only to an Expired requests Performance count.
+- Atomic server transition on admin list/action and customer tracking reads; existing polling invokes it while screens are open. Not a background scheduled job. No deleting records, no expiry of approved/payment-review/paid or later states.
+- Expiry timestamps use rental start (South Africa time for unzoned dates), not the next refresh time. Version increments and one history event prevent stale actions/duplicate events. Approval also checks the cutoff during mutation.
+- Tests pass for exact boundary, future requests, SA/UTC equivalence, approved/paid preservation, repeated refresh, tracking, late actions and metrics. Booking/inventory/pricing/delivery/Performance regressions pass. Full TypeScript check still reports the same eight pre-existing errors; no new errors.
+- React review preserved existing hooks, controls and visual style; added a History filter, expired message/rebooking link and a compact Performance row. No auth bypass or production test bookings.
+- Await owner acceptance before GitHub push. Delivery step at `fdacdbc` also remains unpushed; no approval inferred for its GitHub push from the request to implement expiry.
