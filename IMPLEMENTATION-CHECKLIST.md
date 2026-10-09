@@ -133,3 +133,13 @@ Last approved GitHub baseline: `f4ced52ed2b389c07d47eab0161eb6528a0dba98` (`main
 - Owner authorized server-side rental price validation. Implemented independent calculation, strict quantities/catalogue validation, stale-total rejection before writes, and trusted price snapshots for new bookings. No customer UI, historical records or database schema changed.
 - Automated pricing/booking/inventory/reporting tests passed; see `docs/booking-pricing-testing.md` for coverage and delivery-quote limitation.
 - Pending owner review and approval before this step is pushed to GitHub. Do not start another feature automatically.
+
+## Trusted delivery quotes — 9 October 2026
+
+- Owner approved continuing; server rental-pricing step `c5f7f47` pushed to GitHub before starting this change.
+- Map quotes now persist their server-calculated fee, driving distance and address with an unguessable ID and one-hour expiry. Booking creation validates the quote, address and displayed fee; stored distance/fee comes only from the server record.
+- Customer collection always stores the fixed Vorna Valley address and zero fee. Extras/layout remain unchanged. Old drafts without a quote must return to Delivery; Continue recalculates missing/expired quotes.
+- R250 applies at or below 15,000 actual driving metres; R350 above it. Removed suburb-only geocoding fallback so an unresolved street cannot silently receive a suburb-centre quote.
+- Isolated route tests pass for manual/pinned addresses, expiry/forgery/address and fee changes, exact threshold, map outage, collection, and existing booking/inventory/reporting flows. Mapping responses are mocked; external provider accuracy and authenticated browser acceptance remain manual checks.
+- New schema-only migration adds delivery_quotes; no historical orders changed. Quote cleanup/rate limiting is a future operational improvement, not implemented here.
+- Pending owner review before GitHub push of this delivery step.

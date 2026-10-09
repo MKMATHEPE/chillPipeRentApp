@@ -1,3 +1,5 @@
+import { getDb } from '../../../db';
+
 const ORIGIN =
   'Bel Aire, Langeveld Street, Vorna Valley, Johannesburg, South Africa';
 // Verified map point for Bel Aire Complex on Langeveld Road. Keeping the
@@ -12,7 +14,7 @@ const USER_AGENT =
 
 type Point = { lat: number; lon: number; label: string; suburb?: string };
 
-const json = (data: unknown, status = 200) => Response.json(data, { status });
+const json = (data: unknown, status = 200) => Response.json(data, { status, headers: { 'Cache-Control': 'no-store' } });
 
 async function fetchJson(url: string) {
   const controller = new AbortController();
@@ -87,12 +89,15 @@ export async function POST(request: Request) {
       longitude?: unknown;
     };
     const origin = ORIGIN_POINT;
+    if (!body || typeof body !== 'object' || Array.isArray(body)) return json({ error: 'Invalid delivery details.' }, 400);
+    let quoteAddress = '';
+    let quoteSuburb = '';
 
     let destination: Point | null = null;
     const latitude = Number(body.latitude);
     const longitude = Number(body.longitude);
-    if (Number.isFinite(latitude) && Number.isFinite(longitude)) {
-      if (Math.abs(latitude) > 90 || Math.abs(longitude) > 180)
+    if (body.latitude !== undefined || body.longitude !== undefined) {
+      if (typeof body.latitude !== 'number' || typeof body.longitude !== 'number' || !Number.isFinite(latitude) || !Number.isFinite(longitude) || Math.abs(latitude) > 90 || Math.abs(longitude) > 180)
         return json({ error: 'The pinned location is invalid.' }, 400);
       const pinnedAddress = await reverseGeocode(latitude, longitude);
       destination = {
@@ -100,16 +105,19 @@ export async function POST(request: Request) {
         lon: longitude,
         ...pinnedAddress,
       };
+      quoteAddress = pinnedAddress.label;
+      quoteSuburb = pinnedAddress.suburb;
     } else {
       const address =
         typeof body.address === 'string' ? body.address.trim().slice(0, 240) : '';
       if (!address)
         return json({ error: 'Enter a delivery address first.' }, 400);
-      destination = await geocode(address);
       const suburb =
         typeof body.suburb === 'string' ? body.suburb.trim().slice(0, 100) : '';
-      if (!destination && suburb)
-        destination = await geocode(`${suburb}, Johannesburg, South Africa`);
+      if (!suburb) return json({ error: 'Enter the delivery suburb.' }, 400);
+      destination = await geocode(`${address}, ${suburb}, South Africa`);
+      quoteAddress = address;
+      quoteSuburb = suburb;
       if (!destination)
         return json(
           { error: 'We could not find that address. Add more detail and try again.' },
@@ -122,19 +130,27 @@ export async function POST(request: Request) {
       `https://router.project-osrm.org/route/v1/driving/${coordinates}?overview=false&alternatives=false&steps=false`,
     )) as { code?: string; routes?: Array<{ distance: number }> };
     const metres = route.routes?.[0]?.distance;
-    if (route.code !== 'Ok' || typeof metres !== 'number')
+    if (route.code !== 'Ok' || typeof metres !== 'number' || !Number.isFinite(metres) || metres < 0)
       return json({ error: 'A driving route could not be calculated.' }, 422);
 
     const distanceKm = Math.round((metres / 1000) * 10) / 10;
+    const fee = metres <= 15000 ? 250 : 350;
+    const quoteId = crypto.randomUUID();
+    const expiresAt = Date.now() + 60 * 60 * 1000;
+    await getDb().prepare('INSERT INTO delivery_quotes (id,address,suburb,metres,fee,expires_at) VALUES (?,?,?,?,?,?)')
+      .bind(quoteId, quoteAddress, quoteSuburb, Math.ceil(metres), fee, expiresAt).run();
     return json({
+      quoteId,
+      expiresAt,
       distanceKm,
-      fee: distanceKm <= 15 ? 250 : 350,
+      fee,
       destinationLabel: destination.label,
       destinationSuburb: destination.suburb,
       latitude: destination.lat,
       longitude: destination.lon,
     });
   } catch (error) {
+    if (error instanceof SyntaxError) return json({ error: 'Invalid delivery details.' }, 400);
     console.error(error);
     return json(
       { error: 'Distance calculation is temporarily unavailable. Please try again.' },

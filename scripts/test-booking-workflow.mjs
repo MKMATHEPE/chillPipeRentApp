@@ -24,6 +24,7 @@ function load(file) {
     if (name.endsWith('/admin-bookings')) return modules.bookings;
     if (name.endsWith('/payment-methods')) return modules.payment;
     if (name.endsWith('/booking-pricing')) return modules.pricing;
+    if (name.endsWith('/delivery-quotes')) return modules.deliveryQuotes;
     if (name.endsWith('/inventory-server')) return modules.inventoryServer;
     if (name.endsWith('/inventory')) return modules.inventory;
     throw new Error('Unexpected import ' + name);
@@ -33,16 +34,54 @@ function load(file) {
 }
 modules.payment = load('lib/payment-methods.ts');
 modules.pricing = load('lib/booking-pricing.ts');
+modules.deliveryQuotes = load('lib/delivery-quotes.ts');
 modules.bookings = load('lib/admin-bookings.ts');
 modules.performance = load('lib/performance.ts');
 modules.inventory = load('lib/inventory.ts');
 modules.inventoryServer = load('lib/inventory-server.ts');
 const inventory = load('app/api/admin/inventory/route.ts');
 const client = load('app/api/bookings/route.ts');
+const delivery = load('app/api/delivery-quote/route.ts');
 const admin = load('app/api/admin/bookings/route.ts');
 const payment = load('app/api/bookings/payment/route.ts');
 const req = (path, body, method = 'POST', origin = 'https://app.example') => new Request('https://app.example' + path, { method, headers: { origin, 'content-type': 'application/json' }, ...(body === undefined ? {} : { body: JSON.stringify(body) }) });
-const order = { customer: { name: 'Workflow test', phone: '0000000000', date: '2026-10-20T14:00', location: 'Test address', notes: 'Unit 14' }, quantities: { pipe: 1, premium: 1, coalPack: 2, stove: 1 }, selectedFlavours: [{ name: 'Gum & Mint', quantity: 3 }], suggestedFlavours: [{ name: 'Mango', quantity: 2, details: 'Test brand' }], total: 1810, delivery: true, deliveryFee: 250, paymentMethod: 'cash_on_delivery' };
+// External mapping is stubbed; no production network, addresses or records touched.
+let routeMetres = 15000, mapFails = false, noAddress = false;
+globalThis.fetch = async url => {
+  if(mapFails) throw new Error('Test map outage');
+  if(String(url).includes('/route/v1/')) return Response.json({code:'Ok',routes:[{distance:routeMetres}]});
+  if(String(url).includes('/reverse?')) return Response.json({display_name:'Pinned address',address:{suburb:'Test suburb'}});
+  return Response.json(noAddress ? [] : [{lat:'-26.01',lon:'28.1',display_name:'Mapped address'}]);
+};
+const getQuote = async payload => {
+  const response = await delivery.POST(req('/api/delivery-quote',payload));
+  assert.equal(response.status,200); return response.json();
+};
+const nearQuote = await getQuote({address:'Test address',suburb:'Test suburb'});
+assert.equal(nearQuote.fee,250);
+routeMetres=15000.1;
+const farQuote = await getQuote({address:'Test address',suburb:'Test suburb'});
+assert.equal(farQuote.fee,350); // Threshold uses raw driving metres, not rounded kilometres.
+const pinQuote = await getQuote({latitude:-26,longitude:28});
+assert.equal(sql.prepare('SELECT address FROM delivery_quotes WHERE id=?').get(pinQuote.quoteId).address,'Pinned address');
+assert.equal((await delivery.POST(req('/api/delivery-quote',{latitude:null,longitude:null}))).status,400);
+noAddress=true;
+assert.equal((await delivery.POST(req('/api/delivery-quote',{address:'Unknown',suburb:'Test suburb'}))).status,404);
+noAddress=false; mapFails=true;
+assert.equal((await delivery.POST(req('/api/delivery-quote',{address:'Test',suburb:'Test suburb'}))).status,503);
+mapFails=false;
+const order = { customer: { name: 'Workflow test', phone: '0000000000', date: '2026-10-20T14:00', location: 'Test address, Test suburb', notes: 'Unit 14' }, quantities: { pipe: 1, premium: 1, coalPack: 2, stove: 1 }, selectedFlavours: [{ name: 'Gum & Mint', quantity: 3 }], suggestedFlavours: [{ name: 'Mango', quantity: 2, details: 'Test brand' }], total: 1810, delivery: true, deliveryFee: 250, deliveryQuoteId:nearQuote.quoteId, paymentMethod: 'cash_on_delivery' };
+for(const change of [{deliveryQuoteId:undefined},{deliveryQuoteId:'fake'},{deliveryFee:350},{deliveryQuoteId:farQuote.quoteId},{customer:{...order.customer,location:'Different address'}},{customer:{...order.customer,location:123}}]) {
+  assert.equal((await client.POST(req('/api/bookings',{...order,...change}))).status,409);
+  assert.equal(sql.prepare('SELECT count(*) AS n FROM bookings').get().n,0);
+}
+sql.prepare('UPDATE delivery_quotes SET expires_at=0 WHERE id=?').run(farQuote.quoteId);
+assert.equal((await client.POST(req('/api/bookings',{...order,deliveryQuoteId:farQuote.quoteId,deliveryFee:350}))).status,409);
+const verified = await modules.deliveryQuotes.verifyDeliveryQuote({...order,deliveryDistanceKm:1});
+assert.equal(verified.distanceKm,15);
+assert.equal((await modules.deliveryQuotes.verifyDeliveryQuote({...order,deliveryUnit:'Unit 14',customer:{...order.customer,location:'Test address, Unit 14, Test suburb'}})).fee,250);
+assert.equal((await modules.deliveryQuotes.verifyDeliveryQuote({...order,delivery:false})).location,modules.deliveryQuotes.COLLECTION_LOCATION);
+console.log('PASS trusted delivery fee/address/distance, missing/forged/expired quotes, pinned/manual addresses, exact 15km boundary, map outage and fixed free collection');
 // Pricing failures must not create even a partial booking.
 for (const invalid of [
   {total:0}, {total:1660}, {total:1811}, {total:'1810'}, {total:null}, {total:1810.5},

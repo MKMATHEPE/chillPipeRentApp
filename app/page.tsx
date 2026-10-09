@@ -25,6 +25,8 @@ type Step = 'home' | 'flavours' | 'delivery';
 type Flavour = { id: string; name: string; description: string; image: string };
 type SuggestedFlavour = { name: string; details: string; quantity: number };
 type DeliveryQuote = {
+  quoteId?: string;
+  expiresAt?: number;
   status: 'idle' | 'loading' | 'ready' | 'error';
   distanceKm?: number;
   fee?: 250 | 350;
@@ -506,9 +508,9 @@ export default function BookingFlow() {
       return;
     }
     let confirmedQuote = deliveryQuote;
-    if (delivery && deliveryQuote.status !== 'ready') {
+    if (delivery && (deliveryQuote.status !== 'ready' || !deliveryQuote.quoteId || !deliveryQuote.expiresAt || deliveryQuote.expiresAt <= Date.now())) {
       const calculated = await calculateDeliveryQuote({
-        address: `${address}, ${suburb}, South Africa`,
+        address,
         suburb,
       });
       if (!calculated) {
@@ -540,6 +542,8 @@ export default function BookingFlow() {
           })),
         suggestedFlavours: suggestions,
         delivery,
+        deliveryQuoteId: delivery ? confirmedQuote.quoteId : undefined,
+        deliveryUnit: unit.trim(),
         deliveryFee: delivery ? confirmedQuote.fee : 0,
         deliveryDistanceKm: delivery ? confirmedQuote.distanceKm : 0,
         customer: {
@@ -593,6 +597,8 @@ export default function BookingFlow() {
         body: JSON.stringify(payload),
       });
       const quote = (await response.json()) as {
+        quoteId?: string;
+        expiresAt?: number;
         error?: string;
         distanceKm?: number;
         fee?: 250 | 350;
@@ -613,6 +619,8 @@ export default function BookingFlow() {
         setLocationPinned(true);
       }
       const confirmed: DeliveryQuote = {
+        quoteId: quote.quoteId,
+        expiresAt: quote.expiresAt,
         status: 'ready',
         distanceKm: quote.distanceKm || 0,
         fee: quote.fee || 350,
@@ -1116,7 +1124,7 @@ export default function BookingFlow() {
                   }
                   onClick={() =>
                     void calculateDeliveryQuote({
-                      address: `${address}, ${suburb}, South Africa`,
+                      address,
                       suburb,
                     })
                   }

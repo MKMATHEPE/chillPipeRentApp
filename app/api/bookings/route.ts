@@ -1,6 +1,7 @@
 import { getDb } from '../../../db';
 import { isPaymentMethod } from '@/lib/payment-methods';
 import { BookingInputError, priceBooking } from '@/lib/booking-pricing';
+import { verifyDeliveryQuote } from '@/lib/delivery-quotes';
 
 const json = (data: unknown, status = 200) => Response.json(data, { status, headers: { 'Cache-Control': 'no-store' } });
 const clean = (value: unknown, max = 200) =>
@@ -25,8 +26,10 @@ export async function POST(request: Request) {
         400,
       );
     const priced = priceBooking(body);
+    const verifiedDelivery = await verifyDeliveryQuote(body);
     const reference = `CP-${crypto.randomUUID().slice(0, 6).toUpperCase()}`;
-    const { total, deliveryFee } = priced;
+    const { total } = priced;
+    const deliveryFee = verifiedDelivery.fee;
     // Retain the column for historical records; new rentals require no deposit.
     const deposit = 0;
     const now = Date.now();
@@ -39,7 +42,7 @@ export async function POST(request: Request) {
         name,
         phone,
         date,
-        location,
+        verifiedDelivery.location,
         clean(customer.notes, 500),
         JSON.stringify({
           quantities: priced.quantities,
@@ -48,7 +51,8 @@ export async function POST(request: Request) {
           unitPrices: priced.unitPrices,
           extraFlavourPrice: priced.extraFlavourPrice,
           delivery: Boolean(body.delivery),
-          deliveryDistanceKm: Number(body.deliveryDistanceKm) || 0,
+          deliveryDistanceKm: verifiedDelivery.distanceKm,
+          deliveryQuoteId: verifiedDelivery.quoteId,
         }),
         total,
         deposit,
@@ -68,7 +72,7 @@ export async function POST(request: Request) {
         total,
         deposit,
         deliveryFee,
-        customer: { name, phone, date, location },
+        customer: { name, phone, date, location: verifiedDelivery.location },
       },
       201,
     );
