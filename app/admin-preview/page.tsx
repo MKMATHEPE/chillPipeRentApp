@@ -87,12 +87,14 @@ export default function AdminPreview() {
   const requests = bookings.filter(b => b.status === 'Pending');
   const isClosed = (b: Booking) => b.status === 'Completed' || b.status === 'Declined' || b.status === 'Cancelled' || b.status === 'Expired';
   const query = search.trim().toLowerCase();
-  const visible = bookings.filter(b => {
+  const filterPool = bookings.filter(b => {
     if (tab === 'Requests') return b.status === 'Pending';
     if (b.status === 'Pending' || isClosed(b) !== (bookingView === 'History')) return false;
-    if (filter !== 'All' && (filter === 'Unpaid' ? b.paid : b.status !== filter)) return false;
     return bookingView !== 'History' || !query || `${b.name} ${reference(b.id)}`.toLowerCase().includes(query);
-  }).sort((a, b) => tab === 'Bookings' && bookingView === 'History' ? (b.closedAt ?? 0) - (a.closedAt ?? 0) : 0);
+  });
+  const matchesFilter = (b: Booking, value: string) => value === 'All' || (value === 'Unpaid' ? !b.paid : b.status === value);
+  const filterCount = (value: string) => filterPool.filter(b => matchesFilter(b, value)).length;
+  const visible = filterPool.filter(b => tab === 'Requests' || matchesFilter(b, filter)).sort((a, b) => tab === 'Bookings' && bookingView === 'History' ? (b.closedAt ?? 0) - (a.closedAt ?? 0) : 0);
   const isCalendar = tab === 'Bookings' && bookingView === 'Active';
   const activeBookings = bookings.filter(b => b.status !== 'Pending' && !isClosed(b));
   const displayed = isCalendar ? activeBookings.filter(b => b.rentalStart.slice(0, 10) === calendarDay).sort((a, b) => a.rentalStart.localeCompare(b.rentalStart)) : visible;
@@ -148,7 +150,7 @@ export default function AdminPreview() {
         <div className="cp-booking-views" role="group" aria-label="Booking view">{(['Active', 'History'] as const).map(v => <button key={v} aria-pressed={bookingView === v} onClick={() => changeView(v)}>{v}</button>)}</div>
         {isCalendar && <><BookingCalendar starts={activeBookings.map(b => b.rentalStart)} selected={calendarDay} month={calendarMonth} onSelect={day => { setCalendarDay(day); setSelected(null); }} onMonth={day => { setCalendarMonth(day); setCalendarDay(day); setSelected(null); }} /><div className="cp-calendar-day-heading" aria-live="polite"><h2>{localDate(calendarDay).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'long' })}</h2><span>{displayed.length} {displayed.length === 1 ? 'booking' : 'bookings'}</span></div></>}
         {bookingView === 'History' && <div className="cp-history-search"><input type="search" aria-label="Search booking history" placeholder="Customer name or booking reference" value={search} onChange={e => { setSearch(e.target.value); setSelected(null); }} />{search && <button onClick={() => setSearch('')}>Clear</button>}</div>}
-        {!isCalendar && <div className="cp-filters" aria-label="Filter bookings">{(bookingView === 'History' ? ['All', 'Completed', 'Declined', 'Cancelled', 'Expired'] : ['All', 'Approved', 'Handover', 'Returned', 'Unpaid']).map(f => <button key={f} aria-pressed={filter === f} onClick={() => { setFilter(f); setSelected(null); setMobileDetails(false); }}>{f}</button>)}</div>}
+        {!isCalendar && <div className="cp-filters" aria-label="Filter bookings">{(bookingView === 'History' ? ['All', 'Completed', 'Declined', 'Cancelled', 'Expired'] : ['All', 'Approved', 'Handover', 'Returned', 'Unpaid']).map(f => <button key={f} aria-pressed={filter === f} onClick={() => { setFilter(f); setSelected(null); setMobileDetails(false); }}>{f} ({loading || loadError ? '—' : filterCount(f)})</button>)}</div>}
       </>}
       {inventoryError && <p className="cp-stock-error" role="alert">{inventoryError} <button onClick={() => void refresh()}>Retry</button></p>}
       {tab === 'Performance' ? loading ? <p role="status">Loading results…</p> : loadError ? <p role="status">Results are unavailable until bookings can be refreshed.</p> : <Performance bookings={bookings} /> : tab === 'Inventory' ? inventory ? <Inventory equipment={inventory.equipment} allocations={inventory.allocations} onSave={saveInventory} /> : <p role="status">{inventoryError ? 'Inventory could not be loaded.' : 'Loading inventory…'}</p> : <div className={`cp-admin-workspace ${mobileDetails ? 'show-detail' : ''}`}>
