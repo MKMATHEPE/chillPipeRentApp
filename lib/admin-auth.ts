@@ -44,7 +44,7 @@ export async function verifyAdmin(cookieHeader: string | null) {
     throw new Error('Identity service unavailable');
   }
   if (data.user?.id !== authConfig().ADMIN_USER_ID || !data.user.email_confirmed_at) return null;
-  return { id: data.user.id, expiresAt: row.expires_at };
+  return { id: data.user.id, email: data.user.email, expiresAt: row.expires_at };
 }
 export async function revokeSession(cookieHeader: string | null) {
   const token = readSessionCookie(cookieHeader);

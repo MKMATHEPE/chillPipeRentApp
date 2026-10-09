@@ -3,3 +3,13 @@
 .cp-admin-signout button:focus-visible { outline:2px solid currentColor; outline-offset:3px; }
 .cp-admin-signout button:disabled { opacity:.6; cursor:wait; }
 .cp-admin-signout span { max-width:140px; font-size:12px; }
+.cp-account-dialog{background:#f5f3ef!important;color:#111!important;border-radius:24px!important;padding:24px!important;max-height:85dvh;overflow-y:auto;font-family:Arial,sans-serif}
+.cp-account-dialog [data-slot=dialog-title]{font:normal 24px/1.2 Georgia,serif;margin-right:24px}
+.cp-account-dialog p,.cp-account-dialog [data-slot=dialog-description]{font-size:14px;line-height:1.5}
+.cp-account-email{display:flex;flex-direction:column;gap:5px;padding:12px 0;border-bottom:1px solid #ddd;overflow-wrap:anywhere;font-size:14px}.cp-account-email span{color:#666}
+.cp-account-dialog button,.cp-account-dialog a.cp-account-primary{border:1px solid #ccc;border-radius:12px;padding:12px;min-height:44px;font-size:14px;cursor:pointer;background:white;color:#111;text-align:center}
+.cp-account-dialog .cp-account-primary{background:#111!important;color:white!important;text-decoration:none}
+.cp-account-dialog fieldset{border:0;padding:0;margin:0;min-width:0}.cp-account-dialog label{display:block;font-size:14px;margin-bottom:12px}
+.cp-account-dialog input{display:block;width:100%;box-sizing:border-box;margin-top:5px;border:1px solid #bbb;border-radius:10px;padding:10px;font-size:16px;background:white;color:#111}
+.cp-account-dialog form button{width:100%}.cp-account-dialog button:disabled{opacity:.5;cursor:wait}
+.cp-account-dialog button:focus-visible,.cp-account-dialog input:focus-visible,.cp-account-dialog a:focus-visible{outline:2px solid #777;outline-offset:2px}

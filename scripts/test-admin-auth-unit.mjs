@@ -19,10 +19,13 @@ const db = {
 };
 let identity = { id: 'owner-test', email_confirmed_at: '2026-10-07' };
 let providerError = null;
+let signInError = null, updateError = null, passwordUpdates = 0, temporarySignouts = 0;
 let emailRequests = [];
 const fakeClient = { auth: {
   async resetPasswordForEmail(email, options) { emailRequests.push({email,...options}); return {error:providerError}; },
-  async signInWithPassword() { return { data: { user: identity, session: { access_token: 'fake-provider-token', expires_at: Math.floor(Date.now()/1000)+3600 } }, error: providerError }; },
+  async signInWithPassword() { return { data: { user: identity, session: { access_token: 'fake-provider-token', expires_at: Math.floor(Date.now()/1000)+3600 } }, error: signInError || providerError }; },
+  async updateUser(body) { assert.equal(typeof body.password,'string');passwordUpdates++;return {data:{user:identity},error:updateError}; },
+  async signOut() {temporarySignouts++;return {error:null};},
   async getUser() { return { data: { user: identity }, error: providerError }; },
 } };
 const env = { SUPABASE_URL: 'https://auth.invalid', SUPABASE_PUBLISHABLE_KEY: 'fake', ADMIN_USER_ID: 'owner-test', ADMIN_EMAIL: 'owner@example.invalid', ADMIN_RESET_URL: 'https://app.example/admin-reset' };
@@ -119,4 +122,29 @@ try{
   assert.equal(updates,1);
 }finally{globalThis.fetch=savedFetch;}
 console.log('PASS recovery recipient/redirect, generic non-owner response, invalid input, CSRF, invalid identity, password update, session revocation, token replay rejection (isolated provider)');
+identity={id:'owner-test',email:'owner@example.invalid',email_confirmed_at:'2026-10-07'};
+sql.exec('DELETE FROM admin_login_limits');
+const accountLogin=await login(req());
+const accountCookie=accountLogin.headers.get('set-cookie').split(';')[0];
+const sessionRoute=load('app/api/admin/auth/session/route.ts').GET;
+assert.equal((await (await sessionRoute(new Request('https://app.example',{headers:{cookie:accountCookie}}))).json()).email,identity.email);
+const changePassword=load('app/api/admin/auth/password/route.ts').POST;
+const changeRequest=(body,cookie=accountCookie,origin='https://app.example')=>new Request('https://app.example/api/admin/auth/password',{method:'POST',headers:{origin,cookie,'content-type':'application/json'},body:JSON.stringify(body)});
+const credentials={currentPassword:'Test-only-old-password',password:'Test-only-new-password'};
+assert.equal((await changePassword(changeRequest(credentials,'','https://evil.example'))).status,403);
+assert.equal((await changePassword(changeRequest(credentials,''))).status,401);
+assert.equal((await changePassword(changeRequest({...credentials,password:'short'}))).status,400);
+assert.equal((await changePassword(changeRequest({...credentials,password:credentials.currentPassword}))).status,400);
+signInError={status:400};
+assert.equal((await changePassword(changeRequest(credentials))).status,400);assert.equal(passwordUpdates,0);
+signInError=null;updateError={status:422};
+assert.equal((await changePassword(changeRequest(credentials))).status,400);assert.equal(temporarySignouts,1);
+updateError=null;
+const changeSuccess=await changePassword(changeRequest(credentials));
+assert.equal(changeSuccess.status,200);assert.match(changeSuccess.headers.get('set-cookie'),/Max-Age=0/);
+assert.equal(await core.verifyAdmin(accountCookie),null);assert.equal(temporarySignouts,2);
+assert.equal(JSON.stringify(await changeSuccess.json()).includes('password'),false);
+const again=await login(req());const againCookie=again.headers.get('set-cookie').split(';')[0];
+assert.equal((await changePassword(changeRequest(credentials,againCookie))).status,429);
+console.log('PASS verified account email, password-change CSRF/auth/input/current-password checks, provider rejection, session revocation, temporary session cleanup and rate limiting');
 sql.close();
