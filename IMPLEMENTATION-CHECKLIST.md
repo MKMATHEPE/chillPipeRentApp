@@ -159,3 +159,9 @@ Last approved GitHub baseline: `f4ced52ed2b389c07d47eab0161eb6528a0dba98` (`main
 - Values include recorded booking line items and delivery, including any historical amounts already present. Completed uses completedAt; other closed statuses use closedAt. Current reporting date filters and South Africa dates apply. Active, outside-period and undated records do not enter this total.
 - Label explicitly distinguishes booking value from money received. Existing receipt calculations remain unchanged. No new chart, data writes or layout redesign.
 - Performance tests cover exact row values, aggregate, delivery/extras, date exclusions, undated records, duplicate versions, rounding, receipts separation and real component rendering. Await owner review before GitHub push.
+
+## Compact Performance — 9 October 2026
+
+- Added Week / Month / All time / Custom in one row; date inputs remain Custom-only. All time begins at the earliest valid event date through today, retaining the undated-events warning.
+- Status values now use a 2 × 2 grid with booking counts, a heading total and expandable information icon. Removed the duplicate Expired requests row; existing side-by-side headline KPIs retained.
+- Booking workflow, records, pricing and receipt calculations unchanged. Tests cover counts, historical All time inclusion, empty/invalid dates and component markup. Await owner review before GitHub push.

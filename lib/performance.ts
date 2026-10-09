@@ -10,6 +10,14 @@ export const validRange = (from: string,to: string,today: string) => validDay(fr
 const cents = (b: ReportBooking) => Math.round(b.items.reduce((sum,[,value]) => sum+value,b.fee)*100);
 const units = (value: number | undefined) => Number.isSafeInteger(value) && value! >= 0 ? value! : 0;
 
+export function earliestReportDay(bookings: ReportBooking[], today=reportDay(Date.now())) {
+  return bookings.reduce((first,b) => [b.paidAt,b.handedOverAt,b.completedAt,b.closedAt].reduce<string>((earliest,time) => {
+    if (!validTime(time)) return earliest;
+    const date = reportDay(time);
+    return date < earliest ? date : earliest;
+  },first),today);
+}
+
 export function performanceReport(input: ReportBooking[],from: string,to: string,today=reportDay(Date.now())) {
   const valid = validRange(from,to,today);
   // A refreshed/paginated response must never count the same booking twice.
@@ -20,10 +28,10 @@ export function performanceReport(input: ReportBooking[],from: string,to: string
   const paid = bookings.filter(b => b.paid && inside(b.paidAt));
   const completed = bookings.filter(b => b.status === 'Completed' && inside(b.completedAt));
   const expired = bookings.filter(b => b.status === 'Expired' && inside(b.closedAt));
-  const statusValues = (['Completed','Declined','Cancelled','Expired'] as const).map(status => ({
-    status,
-    value: bookings.filter(b => b.status === status && inside(status === 'Completed' ? b.completedAt : b.closedAt)).reduce((sum,b) => sum+cents(b),0)/100,
-  }));
+  const statusValues = (['Completed','Declined','Cancelled','Expired'] as const).map(status => {
+    const matches = bookings.filter(b => b.status === status && inside(status === 'Completed' ? b.completedAt : b.closedAt));
+    return {status,count:matches.length,value:matches.reduce((sum,b) => sum+cents(b),0)/100};
+  });
   const closedBookingValue = statusValues.reduce((sum,row) => sum+Math.round(row.value*100),0)/100;
   const handedOver = bookings.filter(b => inside(b.handedOverAt));
   const quantities = {Classic:0,Premium:0};

@@ -50,6 +50,13 @@ const closedRecords=[
 ];
 const values=lib.performanceReport(closedRecords,'2026-10-01','2026-10-08','2026-10-08');
 assert.deepEqual(values.statusValues.map(r=>r.value),[900,1200,1250,1300]);
+assert.deepEqual(values.statusValues.map(r=>r.count),[1,1,1,1]);
+assert.equal(lib.earliestReportDay(data,'2026-10-08'),'2026-09-01');
+assert.equal(lib.earliestReportDay([],'2026-10-08'),'2026-10-08');
+assert.equal(lib.earliestReportDay([record('invalid',{paidAt:NaN,handedOverAt:undefined,completedAt:undefined,closedAt:Infinity})],'2026-10-08'),'2026-10-08');
+const allTime=lib.performanceReport(closedRecords,lib.earliestReportDay(closedRecords,'2026-10-08'),'2026-10-08','2026-10-08');
+assert.equal(allTime.statusValues.find(r=>r.status==='Declined').count,2);
+assert.equal(allTime.statusValues.find(r=>r.status==='Declined').value,2000);
 assert.equal(values.closedBookingValue,4650);assert.equal(values.received,900);assert.equal(values.completed.length,1);
 assert.equal(lib.performanceReport([...closedRecords,{...closedRecords[1],version:0}],'2026-10-01','2026-10-08','2026-10-08').closedBookingValue,4650);
 assert.equal(lib.performanceReport(closedRecords,'2026-10-08','2026-10-08','2026-10-08').closedBookingValue,0);
@@ -61,4 +68,7 @@ const Component=load('app/admin-preview/performance.tsx',{'@/lib/performance':li
 const html=renderToStaticMarkup(React.createElement(Component,{bookings:data}));
 for(const label of ['Money received','Completed rentals','Rentals handed over','Most rented','missing event dates','Reporting period','Chart metric','Booking value by status','Booking values—not money received','Declined','Cancelled','Expired']) assert.ok(html.includes(label));
 assert.ok(!html.includes('NaN'));assert.ok(!html.includes('Infinity'));
+assert.ok(html.includes('All time'));assert.ok(html.includes('cp-report-value-grid'));
+assert.ok(html.includes('About booking values'));assert.ok(!html.includes('<dt>Expired requests</dt>'));
+assert.ok(!html.includes('type="date"'));
 console.log('PASS money rounding and real Performance component rendering, labels, controls and historical-data notice');
