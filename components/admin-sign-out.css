@@ -1,7 +1,8 @@
 .cp-admin-signout { display:flex; align-items:center; gap:8px; }
 .cp-admin-signout > button { display:inline-flex; align-items:center; justify-content:center; gap:5px; }
-.cp-admin-signout > button > svg { flex-shrink:0; width:15px; height:15px; }
+.cp-admin-signout > button > svg { flex-shrink:0; width:14px; height:14px; }
 .cp-admin-signout button { border:1px solid #777; border-radius:999px; background:transparent; color:inherit; padding:7px 12px; min-height:40px; font:inherit; font-size:12px; cursor:pointer; }
+.cp-admin-header .cp-admin-signout > button { height:32px; min-height:32px; padding:4px 9px; font-size:12px; line-height:1; }
 .cp-admin-signout button:focus-visible { outline:2px solid currentColor; outline-offset:3px; }
 .cp-admin-signout button:disabled { opacity:.6; cursor:wait; }
 .cp-admin-signout span { max-width:140px; font-size:12px; }
