@@ -178,3 +178,8 @@ Last approved GitHub baseline: `f4ced52ed2b389c07d47eab0161eb6528a0dba98` (`main
 - Integer-cent calculations support saved decimal prices. New bookings retain price snapshots; existing booking JSON/totals are untouched. Only untouched version-0 legacy defaults upgrade to R650/R850; owner-edited equipment rows are preserved.
 - Tests cover admin save → catalogue → checkout, each equipment price, decimals, stale and racing price updates, historical preservation, database failure, stock and booking lifecycle. React review: shared hook, deduplicated requests, effect cleanup, retry states, checkout acceptance reset. Full TypeScript check still has eight pre-existing errors; no new errors.
 - Await owner testing/acceptance before GitHub push. Prior compact-row and font changes also await approval.
+
+## Approved checkpoint — 9 October 2026
+
+- Owner confirmed “Yes i'm happy” after the inventory connection review and proposed GitHub checkpoint. This approves the current accumulated app state through `3a00ebfcdcfc9a4df734b3406465191bf739481a` (live version 114), including inventory-linked prices, compact admin rows, typography and Performance changes.
+- Proceed with the non-force GitHub main push. Next proposed topic is new-booking notifications; no notification changes are authorized or implemented yet.
