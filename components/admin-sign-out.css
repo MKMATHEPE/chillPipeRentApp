@@ -3,7 +3,10 @@
 .cp-admin-signout button:focus-visible { outline:2px solid currentColor; outline-offset:3px; }
 .cp-admin-signout button:disabled { opacity:.6; cursor:wait; }
 .cp-admin-signout span { max-width:140px; font-size:12px; }
-.cp-account-dialog{background:#f5f3ef!important;color:#111!important;border-radius:24px!important;padding:24px!important;max-height:85dvh;overflow-y:auto;font-family:Arial,sans-serif}
+.cp-account-dialog[data-slot=dialog-content]{position:fixed;inset:auto;top:50%;left:50%;transform:translate(-50%,-50%);z-index:101;display:grid;gap:16px;width:min(440px,calc(100vw - 32px));box-sizing:border-box;background:#f5f3ef!important;color:#111!important;border-radius:24px!important;padding:24px!important;max-height:calc(100dvh - 32px);overflow-y:auto;overscroll-behavior:contain;box-shadow:0 24px 100px #0005;font-family:Arial,sans-serif}
+body:has(.cp-account-dialog[data-slot=dialog-content]) [data-slot=dialog-overlay]{position:fixed;inset:0;z-index:100;background:#0006}
+.cp-account-dialog [data-slot=dialog-header]{display:grid;gap:8px}
+.cp-account-dialog [data-slot=dialog-title],.cp-account-dialog p{margin-top:0;margin-bottom:0}
 .cp-account-dialog [data-slot=dialog-title]{font:normal 24px/1.2 Georgia,serif;margin-right:24px}
 .cp-account-dialog p,.cp-account-dialog [data-slot=dialog-description]{font-size:14px;line-height:1.5}
 .cp-account-email{display:flex;flex-direction:column;gap:5px;padding:12px 0;border-bottom:1px solid #ddd;overflow-wrap:anywhere;font-size:14px}.cp-account-email span{color:#666}
@@ -13,3 +16,6 @@
 .cp-account-dialog input{display:block;width:100%;box-sizing:border-box;margin-top:5px;border:1px solid #bbb;border-radius:10px;padding:10px;font-size:16px;background:white;color:#111}
 .cp-account-dialog form button{width:100%}.cp-account-dialog button:disabled{opacity:.5;cursor:wait}
 .cp-account-dialog button:focus-visible,.cp-account-dialog input:focus-visible,.cp-account-dialog a:focus-visible{outline:2px solid #777;outline-offset:2px}
+.cp-account-dialog > [data-slot=dialog-close]{position:absolute;top:8px;right:8px;display:grid;place-items:center;width:44px;height:44px;padding:12px;border:0;background:transparent}
+.cp-account-dialog > [data-slot=dialog-close] svg{width:20px;height:20px}
+.cp-account-dialog > [data-slot=dialog-close] .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
