@@ -1,5 +1,6 @@
 'use client';
 import { useRef, useState } from 'react';
+import { UserRound } from 'lucide-react';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import './admin-sign-out.css';
 export default function AdminSignOut() {
@@ -36,7 +37,7 @@ export default function AdminSignOut() {
     finally{lock.current=false;setBusy(false);}
   }
   const changed=message.startsWith('Password changed.');
-  return <><div className="cp-admin-signout"><button onClick={()=>{setOpen(true);setMessage('');setChanging(false);void loadAccount();}}>Account</button></div>
+  return <><div className="cp-admin-signout"><button onClick={()=>{setOpen(true);setMessage('');setChanging(false);void loadAccount();}}><UserRound size={18} aria-hidden="true"/>Account</button></div>
     <Dialog open={open} onOpenChange={value=>{if(!busy){setOpen(value);if(!value){clearPasswords();if(changed)window.location.replace('/admin-login');}}}}>
       <DialogContent className="cp-account-dialog"><DialogTitle>Admin account</DialogTitle><DialogDescription>Manage your sign-in details.</DialogDescription>
         {loading?<p role="status">Loading account…</p>:email&&<div className="cp-account-email"><span>Signed in as</span><strong>{email}</strong></div>}
