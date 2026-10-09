@@ -183,3 +183,9 @@ Last approved GitHub baseline: `f4ced52ed2b389c07d47eab0161eb6528a0dba98` (`main
 
 - Owner confirmed “Yes i'm happy” after the inventory connection review and proposed GitHub checkpoint. This approves the current accumulated app state through `3a00ebfcdcfc9a4df734b3406465191bf739481a` (live version 114), including inventory-linked prices, compact admin rows, typography and Performance changes.
 - Proceed with the non-force GitHub main push. Next proposed topic is new-booking notifications; no notification changes are authorized or implemented yet.
+
+## Silent in-app booking alerts — 9 October 2026
+
+- Owner approved a grouped, dismissible banner on every admin tab, with View requests. Existing visible-page 30-second refresh and focus refresh retained; no sound, browser notifications or closed-app delivery.
+- First successful load establishes a baseline. New pending IDs accumulate in one banner; dismissed IDs do not re-alert during the mounted admin session. Processed/expired entries drop out at refresh. View requests dismisses and opens Requests, without changing booking data.
+- Dedicated alert tests cover initial load, grouped arrivals, duplicate/repeated/disappearing records and dismissal. Await owner review before GitHub push.

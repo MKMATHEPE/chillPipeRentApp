@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { AdminBooking as Booking, Status } from '@/lib/admin-bookings';
 import AdminSignOut from '@/components/admin-sign-out';
+import { pendingAlerts } from '@/lib/booking-alerts';
 import { ArrowLeft, ArrowUpRight, Check, CalendarDays, ChevronRight, ClipboardList, Package, Inbox, MapPin, Phone, Truck, ChartNoAxesColumnIncreasing } from 'lucide-react';
 import Performance from './performance';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -34,6 +35,7 @@ export default function AdminPreview() {
   const actionTarget = useRef<Booking | null>(null);
   const [reason, setReason] = useState('');
   const [notice, setNotice] = useState('');
+  const [alertIds, setAlertIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [saving, setSaving] = useState(false);
@@ -59,9 +61,9 @@ export default function AdminPreview() {
       } while (cursor);
       if (abort.signal.aborted || current !== generation.current) return;
       const pending = all.filter(b => b.status === 'Pending');
-      const count = seen.current ? pending.filter(b => !seen.current!.has(b.id)).length : 0;
-      if (count) setNotice(`${count} new booking request${count === 1 ? '' : 's'} received.`);
-      seen.current = new Set(all.map(b => b.id));
+      const previousSeen = seen.current;
+      setAlertIds(ids => pendingAlerts(ids,previousSeen,pending.map(b => b.id)));
+      seen.current = new Set([...(previousSeen ?? []),...all.map(b => b.id)]);
       setBookings(all); setLoadError('');
       try {
         const response = await fetch('/api/admin/inventory', {cache:'no-store',signal:abort.signal});
@@ -85,7 +87,6 @@ export default function AdminPreview() {
     return () => { clearInterval(interval); window.removeEventListener('focus', tick); document.removeEventListener('visibilitychange', tick); controller.current?.abort(); fetching.current = false; };
   }, []);
   const requests = bookings.filter(b => b.status === 'Pending');
-  const newRequestCount = notice.match(/^(\d+) new booking requests? received\.$/)?.[1];
   const requestSummary = tab === 'Requests' && !mobileDetails && !loading && !loadError;
   const isClosed = (b: Booking) => b.status === 'Completed' || b.status === 'Declined' || b.status === 'Cancelled' || b.status === 'Expired';
   const query = search.trim().toLowerCase();
@@ -143,10 +144,14 @@ export default function AdminPreview() {
     <header className="cp-admin-header"><div className="cp-admin-brand"><img src="/chill-pipe-logo.webp" alt="The Chill Pipe" /><span>ADMIN</span></div><AdminSignOut /></header>
     <div className="cp-admin-hero"><img src="/hookah-hero.webp" alt="" /></div>
     <div className={`cp-admin-shell ${mobileDetails ? 'detail-open' : ''}`}>
+      {alertIds.length > 0 && <aside className="cp-request-alert" aria-label="New booking requests">
+        <p role="status" aria-live="polite" aria-atomic="true">{alertIds.length === 1 ? 'New booking request received' : `${alertIds.length} new booking requests`}</p>
+        <div><button onClick={() => { setAlertIds([]); changeTab('Requests'); }}>View requests</button><button aria-label="Dismiss new booking alert" onClick={() => setAlertIds([])}>Dismiss</button></div>
+      </aside>}
       <div className="cp-panel-handle" aria-hidden="true" />
       <nav className="cp-admin-tabs" aria-label="Admin sections">{(['Requests', 'Bookings', 'Inventory', 'Performance'] as const).map(t => <button key={t} aria-current={tab === t ? 'page' : undefined} onClick={() => changeTab(t)}>{t === 'Requests' ? <Inbox size={19} /> : t === 'Inventory' ? <Package size={19} /> : t === 'Performance' ? <ChartNoAxesColumnIncreasing size={19} /> : <ClipboardList size={19} />}{t}{t === 'Requests' && <span>{requests.length}</span>}</button>)}</nav>
       {!mobileDetails && <div className="cp-admin-heading"><div><h1>{tab === 'Requests' ? 'Booking requests' : tab === 'Inventory' ? 'Equipment inventory' : tab === 'Performance' ? 'Performance' : 'Your bookings'}</h1></div>{tab !== 'Performance' && tab !== 'Requests' && <span>{tab === 'Inventory' ? '4 equipment types' : `${visible.length} bookings`}</span>}</div>}
-      <p className="cp-admin-notice" role="status">{loading ? 'Loading bookings…' : requestSummary ? `${requests.length} awaiting review${newRequestCount ? ` · ${newRequestCount} new` : notice ? ` · ${notice}` : ''}` : notice}</p>
+      <p className="cp-admin-notice" role="status">{loading ? 'Loading bookings…' : requestSummary ? `${requests.length} awaiting review${notice ? ` · ${notice}` : ''}` : notice}</p>
       {loadError && <p className="cp-stock-error" role="alert">{loadError} <button onClick={() => void refresh()}>Retry</button></p>}
       {tab === 'Bookings' && !mobileDetails && <>
         <div className="cp-booking-views" role="group" aria-label="Booking view">{(['Active', 'History'] as const).map(v => <button key={v} aria-pressed={bookingView === v} onClick={() => changeView(v)}>{v}</button>)}</div>
