@@ -20,6 +20,11 @@ export function performanceReport(input: ReportBooking[],from: string,to: string
   const paid = bookings.filter(b => b.paid && inside(b.paidAt));
   const completed = bookings.filter(b => b.status === 'Completed' && inside(b.completedAt));
   const expired = bookings.filter(b => b.status === 'Expired' && inside(b.closedAt));
+  const statusValues = (['Completed','Declined','Cancelled','Expired'] as const).map(status => ({
+    status,
+    value: bookings.filter(b => b.status === status && inside(status === 'Completed' ? b.completedAt : b.closedAt)).reduce((sum,b) => sum+cents(b),0)/100,
+  }));
+  const closedBookingValue = statusValues.reduce((sum,row) => sum+Math.round(row.value*100),0)/100;
   const handedOver = bookings.filter(b => inside(b.handedOverAt));
   const quantities = {Classic:0,Premium:0};
   completed.forEach(b => { quantities.Classic += units(b.quantities.pipe); quantities.Premium += units(b.quantities.premium); });
@@ -31,6 +36,6 @@ export function performanceReport(input: ReportBooking[],from: string,to: string
     const within=(time:number) => reportDay(time) >= first && reportDay(time) <= last;
     return {first,last,money:paid.filter(b => within(b.paidAt!)).reduce((sum,b) => sum+cents(b),0)/100,rentals:completed.filter(b => within(b.completedAt!)).length};
   });
-  const undated = bookings.filter(b => (b.paid && !validTime(b.paidAt)) || (b.status === 'Completed' && !validTime(b.completedAt)) || (['Handover','Returned','Completed'].includes(b.status) && !validTime(b.handedOverAt))).length;
-  return {valid,paid,completed,expired,handedOver,received:paid.reduce((sum,b) => sum+cents(b),0)/100,average:completed.length ? completed.reduce((sum,b) => sum+cents(b),0)/100/completed.length : null,quantities,returning,bars,group,undated};
+  const undated = bookings.filter(b => (b.paid && !validTime(b.paidAt)) || (b.status === 'Completed' && !validTime(b.completedAt)) || (['Declined','Cancelled','Expired'].includes(b.status) && !validTime(b.closedAt)) || (['Handover','Returned','Completed'].includes(b.status) && !validTime(b.handedOverAt))).length;
+  return {valid,paid,completed,expired,statusValues,closedBookingValue,handedOver,received:paid.reduce((sum,b) => sum+cents(b),0)/100,average:completed.length ? completed.reduce((sum,b) => sum+cents(b),0)/100/completed.length : null,quantities,returning,bars,group,undated};
 }

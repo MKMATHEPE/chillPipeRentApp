@@ -41,9 +41,24 @@ console.log('PASS South Africa midnight boundary, reversed/invalid/future dates,
 const pennies=[record('cents1',{items:[['Small',0.1]],fee:0.2}),record('cents2',{items:[['Small',0.1]],fee:0})];
 assert.equal(lib.performanceReport(pennies,'2026-10-01','2026-10-08','2026-10-08').received,0.4);
 const React=requireNode('react');
+const closedRecords=[
+ record('completed',{items:[['Rental',650]],fee:250}),
+ ...['Declined','Cancelled','Expired'].map((status,i)=>record(status,{status,paid:false,paidAt:undefined,handedOverAt:undefined,completedAt:undefined,closedAt:time('2026-10-07T10:00Z'),items:[['Rental and extras',850+i*50]],fee:350})),
+ record('outside',{status:'Declined',paid:false,closedAt:time('2026-09-30T10:00Z')}),
+ record('undated-closed',{status:'Expired',paid:false,closedAt:undefined,handedOverAt:undefined,completedAt:undefined}),
+ record('active',{status:'Approved',paid:false}),
+];
+const values=lib.performanceReport(closedRecords,'2026-10-01','2026-10-08','2026-10-08');
+assert.deepEqual(values.statusValues.map(r=>r.value),[900,1200,1250,1300]);
+assert.equal(values.closedBookingValue,4650);assert.equal(values.received,900);assert.equal(values.completed.length,1);
+assert.equal(lib.performanceReport([...closedRecords,{...closedRecords[1],version:0}],'2026-10-01','2026-10-08','2026-10-08').closedBookingValue,4650);
+assert.equal(lib.performanceReport(closedRecords,'2026-10-08','2026-10-08','2026-10-08').closedBookingValue,0);
+assert.equal(lib.performanceReport(closedRecords,'bad','2026-10-08','2026-10-08').closedBookingValue,0);
+assert.equal(lib.performanceReport(pennies,'2026-10-01','2026-10-08','2026-10-08').closedBookingValue,0.4);
+console.log('PASS closed-status booking values, delivery/extras, combined total, date exclusions, undated records, duplicates, rounding and separation from receipts');
 const {renderToStaticMarkup}=requireNode('react-dom/server');
 const Component=load('app/admin-preview/performance.tsx',{'@/lib/performance':lib}).default;
 const html=renderToStaticMarkup(React.createElement(Component,{bookings:data}));
-for(const label of ['Money received','Completed rentals','Rentals handed over','Most rented','missing event dates','Reporting period','Chart metric']) assert.ok(html.includes(label));
+for(const label of ['Money received','Completed rentals','Rentals handed over','Most rented','missing event dates','Reporting period','Chart metric','Booking value by status','Booking values—not money received','Declined','Cancelled','Expired']) assert.ok(html.includes(label));
 assert.ok(!html.includes('NaN'));assert.ok(!html.includes('Infinity'));
 console.log('PASS money rounding and real Performance component rendering, labels, controls and historical-data notice');

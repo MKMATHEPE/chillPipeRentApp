@@ -16,7 +16,7 @@ export default function Performance({ bookings }: { bookings: ReportBooking[] })
   const weekday = new Date(`${today}T12:00:00Z`).getUTCDay();
   const from = period === 'Custom' ? start : period === 'This month' ? today.slice(0, 8) + '01' : shift(today, -(weekday + 6) % 7);
   const to = period === 'Custom' ? end : today;
-  const {valid,completed,expired,handedOver,received,average,quantities,returning,group,undated,bars:results} = performanceReport(bookings,from,to,today);
+  const {valid,completed,expired,statusValues,closedBookingValue,handedOver,received,average,quantities,returning,group,undated,bars:results} = performanceReport(bookings,from,to,today);
   const bars = results.map(bar => ({...bar,value:metric === 'Money' ? bar.money : bar.rentals}));
   const max = Math.max(1, ...bars.map(b => b.value));
   const label = (key: string) => new Date(`${key}T12:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' });
@@ -32,6 +32,14 @@ export default function Performance({ bookings }: { bookings: ReportBooking[] })
       <section className="cp-report-card"><div className="cp-report-chart-heading"><h2>Results</h2><div role="group" aria-label="Chart metric">{['Money', 'Rentals'].map(m => <button key={m} aria-pressed={metric === m} onClick={() => { setMetric(m); setPicked(null); }}>{m}</button>)}</div></div>
         <p className="cp-report-selection" aria-live="polite">{selected ? `${label(selected.first)}${selected.first !== selected.last ? ` – ${label(selected.last)}` : ''}: ${format(selected.value)}` : bars.some(b => b.value) ? 'Tap a bar to see the result' : `No ${metric === 'Money' ? 'payments recorded' : 'completed rentals'} in this period`}</p>
         <div className="cp-report-bars">{bars.map((bar, i) => <button key={bar.first} aria-label={`${label(bar.first)} to ${label(bar.last)}: ${format(bar.value)}`} aria-pressed={picked === i} onClick={() => setPicked(i)}><span className="cp-report-bar-track"><i style={{ height: `${bar.value / max * 100}%` }} /></span><small>{group === 1 ? new Date(`${bar.first}T12:00:00Z`).toLocaleDateString('en-GB', { weekday: 'short', timeZone: 'UTC' }) : label(bar.first)}</small></button>)}</div>
+      </section>
+      <section className="cp-report-card" aria-labelledby="booking-value-heading">
+        <h2 id="booking-value-heading">Booking value by status</h2>
+        <dl className="cp-report-stats">
+          {statusValues.map(row => <div key={row.status}><dt>{row.status}</dt><dd>{money(row.value)}</dd></div>)}
+          <div><dt><strong>Total</strong></dt><dd>{money(closedBookingValue)}</dd></div>
+        </dl>
+        <p className="cp-report-range">Booking values—not money received. Includes delivery and extras. Uses completion, decline, cancellation or expiry date within the selected period.</p>
       </section>
       <dl className="cp-report-card cp-report-stats"><div><Tag size={18} /><dt>Average rental value</dt><dd>{average === null ? '—' : money(average)}</dd></div><div><Package size={18} /><dt>Rentals handed over</dt><dd>{handedOver.length}</dd></div><div><Package size={18} /><dt>Hookahs rented</dt><dd>{quantities.Classic + quantities.Premium}</dd></div><div><Users size={18} /><dt>Repeat customers</dt><dd>{returning}</dd></div><div><Tag size={18} /><dt>Expired requests</dt><dd>{expired.length}</dd></div></dl>
       <section className="cp-report-card"><h2>Most rented</h2>{(['Classic', 'Premium'] as const).map(name => <div className="cp-report-popular" key={name}><span>{name}</span><div><i style={{ width: `${quantities[name] / Math.max(1, quantities.Classic, quantities.Premium) * 100}%` }} /></div><strong>{quantities[name]}</strong></div>)}</section>

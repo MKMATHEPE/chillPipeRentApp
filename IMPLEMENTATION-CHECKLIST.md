@@ -152,3 +152,10 @@ Last approved GitHub baseline: `f4ced52ed2b389c07d47eab0161eb6528a0dba98` (`main
 - Tests pass for exact boundary, future requests, SA/UTC equivalence, approved/paid preservation, repeated refresh, tracking, late actions and metrics. Booking/inventory/pricing/delivery/Performance regressions pass. Full TypeScript check still reports the same eight pre-existing errors; no new errors.
 - React review preserved existing hooks, controls and visual style; added a History filter, expired message/rebooking link and a compact Performance row. No auth bypass or production test bookings.
 - Await owner acceptance before GitHub push. Delivery step at `fdacdbc` also remains unpushed; no approval inferred for its GitHub push from the request to implement expiry.
+
+## Booking value by status — 9 October 2026
+
+- Added the approved compact Performance card below Results: Completed, Declined, Cancelled, Expired and their total. History filter counts remain unchanged.
+- Values include recorded booking line items and delivery, including any historical amounts already present. Completed uses completedAt; other closed statuses use closedAt. Current reporting date filters and South Africa dates apply. Active, outside-period and undated records do not enter this total.
+- Label explicitly distinguishes booking value from money received. Existing receipt calculations remain unchanged. No new chart, data writes or layout redesign.
+- Performance tests cover exact row values, aggregate, delivery/extras, date exclusions, undated records, duplicate versions, rounding, receipts separation and real component rendering. Await owner review before GitHub push.
