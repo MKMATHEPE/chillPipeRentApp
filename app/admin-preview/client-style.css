@@ -25,3 +25,17 @@
 .cp-filters{gap:7px;margin-bottom:20px}.cp-filters button{padding:8px 12px;font-size:13px;min-height:38px}.cp-progress span{font-size:12px}.detail-open .cp-admin-notice:empty{display:none}
 .cp-inventory .cp-equipment{padding:10px 14px 13px;margin-bottom:9px;border-radius:18px}.cp-inventory .cp-equipment-top{gap:8px}.cp-inventory .cp-equipment h2{font-size:20px;line-height:1.35;min-width:0}.cp-equipment h2 span{font:normal 15px/1.35 Arial,sans-serif;white-space:nowrap;color:#555}.cp-inventory .cp-equipment button{flex-shrink:0;padding:8px 12px}.cp-inventory .cp-equipment dl{display:flex;flex-wrap:wrap;gap:5px 8px;margin:6px 0 0}.cp-inventory .cp-equipment dl div{display:flex;flex-direction:row-reverse;align-items:baseline;gap:4px;white-space:nowrap}.cp-inventory .cp-equipment dt{font-size:14px;text-transform:lowercase;color:#666}.cp-inventory .cp-equipment dd{font-size:14px;font-weight:600}.cp-stock-help{margin-top:12px;border-top:1px solid #dedbd5;font-size:14px;color:#555}.cp-stock-help summary{padding:14px 0;min-height:44px;cursor:pointer}.cp-stock-help .cp-inventory-note{margin:0 0 12px}
 @media(max-width:360px){.cp-admin-shell{padding-left:16px;padding-right:16px}.cp-detail-heading h2{font-size:27px}.cp-status{font-size:11px;padding:6px 8px}.cp-actions{gap:8px}.cp-primary,.cp-secondary{padding:12px 16px}}
+/* Match the compact Performance scale across admin tabs only. */
+.cp-admin .cp-admin-heading h1{font-size:clamp(26px,6.5vw,32px)}
+.cp-admin .cp-booking-row h2{font-size:22px}
+.cp-admin .cp-compact-card h2{font-size:18px}
+.cp-admin .cp-compact-top>strong{font-size:14px}
+.cp-admin .cp-detail-heading h2{font-size:26px}
+.cp-admin .cp-session h3,.cp-admin .cp-decline-reason h3{font-size:22px}
+.cp-admin .cp-total strong{font-size:25px}
+.cp-admin .cp-booking-calendar .rdp-caption_label,.cp-admin .cp-calendar-day-heading h2{font-size:20px}
+.cp-admin .cp-booking-calendar button[data-day]{font-size:14px}
+.cp-admin .cp-inventory .cp-equipment h2{font-size:18px}
+.cp-admin .cp-equipment h2 span{font-size:14px}
+.cp-admin .cp-empty h2{font-size:22px}
+.cp-confirm [data-slot=dialog-title]{font-size:22px}

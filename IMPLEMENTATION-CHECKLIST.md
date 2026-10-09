@@ -165,3 +165,8 @@ Last approved GitHub baseline: `f4ced52ed2b389c07d47eab0161eb6528a0dba98` (`main
 - Added Week / Month / All time / Custom in one row; date inputs remain Custom-only. All time begins at the earliest valid event date through today, retaining the undated-events warning.
 - Status values now use a 2 × 2 grid with booking counts, a heading total and expandable information icon. Removed the duplicate Expired requests row; existing side-by-side headline KPIs retained.
 - Booking workflow, records, pricing and receipt calculations unchanged. Tests cover counts, historical All time inclusion, empty/invalid dates and component markup. Await owner review before GitHub push.
+
+## Admin typography — 9 October 2026
+
+- After two small Performance font reductions, user requested the same treatment across all admin tabs. Applied smaller page/card/calendar/detail/dialog headings and prominent amounts to Requests, Bookings and Inventory; retained the approved Performance scale.
+- Readable labels, input sizes, tap targets, customer pages and booking logic remain unchanged. CSS-only change; await owner review before GitHub push.
