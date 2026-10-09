@@ -39,3 +39,10 @@
 .cp-admin .cp-equipment h2 span{font-size:14px}
 .cp-admin .cp-empty h2{font-size:22px}
 .cp-confirm [data-slot=dialog-title]{font-size:22px}
+.cp-admin .cp-order-panel{gap:0;background:#fff;border:1px solid #dedbd5;border-radius:18px;overflow:hidden}
+.cp-admin .cp-order-panel .cp-compact-card{min-height:72px;padding:12px 14px;border:0;border-bottom:1px solid #e8e5df;border-radius:0;background:transparent;width:100%}
+.cp-admin .cp-order-panel .cp-compact-card:last-child{border-bottom:0}
+.cp-admin .cp-order-panel .cp-compact-card:hover{background:#f8f7f5}
+.cp-admin .cp-order-panel .cp-compact-card:focus-visible{outline:2px solid #111;outline-offset:-3px;background:#f8f7f5}
+.cp-admin .cp-order-panel .cp-compact-bottom{margin-top:4px;align-items:baseline}
+.cp-admin .cp-order-panel .cp-compact-status{margin:0;flex-shrink:0;font-size:12px;line-height:1.4;padding:2px 7px;background:#f0efec;border-radius:99px}

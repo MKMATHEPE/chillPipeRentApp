@@ -85,6 +85,8 @@ export default function AdminPreview() {
     return () => { clearInterval(interval); window.removeEventListener('focus', tick); document.removeEventListener('visibilitychange', tick); controller.current?.abort(); fetching.current = false; };
   }, []);
   const requests = bookings.filter(b => b.status === 'Pending');
+  const newRequestCount = notice.match(/^(\d+) new booking requests? received\.$/)?.[1];
+  const requestSummary = tab === 'Requests' && !mobileDetails && !loading && !loadError;
   const isClosed = (b: Booking) => b.status === 'Completed' || b.status === 'Declined' || b.status === 'Cancelled' || b.status === 'Expired';
   const query = search.trim().toLowerCase();
   const filterPool = bookings.filter(b => {
@@ -143,8 +145,8 @@ export default function AdminPreview() {
     <div className={`cp-admin-shell ${mobileDetails ? 'detail-open' : ''}`}>
       <div className="cp-panel-handle" aria-hidden="true" />
       <nav className="cp-admin-tabs" aria-label="Admin sections">{(['Requests', 'Bookings', 'Inventory', 'Performance'] as const).map(t => <button key={t} aria-current={tab === t ? 'page' : undefined} onClick={() => changeTab(t)}>{t === 'Requests' ? <Inbox size={19} /> : t === 'Inventory' ? <Package size={19} /> : t === 'Performance' ? <ChartNoAxesColumnIncreasing size={19} /> : <ClipboardList size={19} />}{t}{t === 'Requests' && <span>{requests.length}</span>}</button>)}</nav>
-      {!mobileDetails && <div className="cp-admin-heading"><div><h1>{tab === 'Requests' ? 'Booking requests' : tab === 'Inventory' ? 'Equipment inventory' : tab === 'Performance' ? 'Performance' : 'Your bookings'}</h1></div>{tab !== 'Performance' && <span>{tab === 'Inventory' ? '4 equipment types' : `${visible.length} ${tab === 'Requests' ? 'awaiting review' : 'bookings'}`}</span>}</div>}
-      <p className="cp-admin-notice" role="status">{loading ? 'Loading bookings…' : notice}</p>
+      {!mobileDetails && <div className="cp-admin-heading"><div><h1>{tab === 'Requests' ? 'Booking requests' : tab === 'Inventory' ? 'Equipment inventory' : tab === 'Performance' ? 'Performance' : 'Your bookings'}</h1></div>{tab !== 'Performance' && tab !== 'Requests' && <span>{tab === 'Inventory' ? '4 equipment types' : `${visible.length} bookings`}</span>}</div>}
+      <p className="cp-admin-notice" role="status">{loading ? 'Loading bookings…' : requestSummary ? `${requests.length} awaiting review${newRequestCount ? ` · ${newRequestCount} new` : notice ? ` · ${notice}` : ''}` : notice}</p>
       {loadError && <p className="cp-stock-error" role="alert">{loadError} <button onClick={() => void refresh()}>Retry</button></p>}
       {tab === 'Bookings' && !mobileDetails && <>
         <div className="cp-booking-views" role="group" aria-label="Booking view">{(['Active', 'History'] as const).map(v => <button key={v} aria-pressed={bookingView === v} onClick={() => changeView(v)}>{v}</button>)}</div>
@@ -154,11 +156,10 @@ export default function AdminPreview() {
       </>}
       {inventoryError && <p className="cp-stock-error" role="alert">{inventoryError} <button onClick={() => void refresh()}>Retry</button></p>}
       {tab === 'Performance' ? loading ? <p role="status">Loading results…</p> : loadError ? <p role="status">Results are unavailable until bookings can be refreshed.</p> : <Performance bookings={bookings} /> : tab === 'Inventory' ? inventory ? <Inventory equipment={inventory.equipment} allocations={inventory.allocations} onSave={saveInventory} /> : <p role="status">{inventoryError ? 'Inventory could not be loaded.' : 'Loading inventory…'}</p> : <div className={`cp-admin-workspace ${mobileDetails ? 'show-detail' : ''}`}>
-        <section className="cp-booking-list" aria-label={tab}>
+        <section className={`cp-booking-list${displayed.length ? ' cp-order-panel' : ''}`} aria-label={tab}>
           {displayed.map(b => <button className="cp-booking-row cp-compact-card" key={b.id} onClick={() => { setSelected(b.id); setMobileDetails(true); window.scrollTo({ top: 0 }); }}>
             <div className="cp-compact-top"><h2>{b.name}</h2><strong>{money(total(b))}</strong></div>
-            <div className="cp-compact-bottom"><span>{isCalendar ? b.date.split(' · ')[1] : b.date.replace(/\s\d{4}(?=\s·)/, '')} · {b.mode === 'Customer collection' ? 'Collection' : 'Delivery'}</span><ChevronRight size={17} aria-hidden="true" /></div>
-            {tab === 'Bookings' && (filter === 'All' || filter === 'Unpaid') && <span className="cp-compact-status">{b.status}</span>}
+            <div className="cp-compact-bottom"><span>{isCalendar ? b.date.split(' · ')[1] : b.date.replace(/\s\d{4}(?=\s·)/, '')} · {b.mode === 'Customer collection' ? 'Collection' : 'Delivery'}</span>{tab === 'Bookings' && (filter === 'All' || filter === 'Unpaid') && <span className="cp-compact-status">{b.status}</span>}</div>
           </button>)}
           {isCalendar && !loading && !loadError && !displayed.length && <div className="cp-empty"><CalendarDays size={30} /><h2>No bookings on this date</h2><p>Select another date to see its bookings.</p></div>}
           {!isCalendar && !loading && !loadError && !displayed.length && <div className="cp-empty"><Inbox size={30} /><h2>{tab === 'Requests' ? 'All caught up' : search || filter !== 'All' ? 'No matching bookings' : bookingView === 'History' ? 'No booking history yet' : 'No active bookings'}</h2><p>{tab === 'Requests' ? 'No pending requests to review.' : search || filter !== 'All' ? 'Try another search or filter.' : bookingView === 'History' ? 'Completed, declined, cancelled and expired bookings will be kept here.' : 'Approved rentals will appear here. Finished bookings are in History.'}</p></div>}
