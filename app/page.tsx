@@ -20,6 +20,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { AppHeader } from '@/components/app-header';
+import { useRentalPrices } from '@/lib/use-rental-prices';
 
 type Step = 'home' | 'flavours' | 'delivery';
 type Flavour = { id: string; name: string; description: string; image: string };
@@ -258,6 +259,7 @@ function DeliveryOption({
 }
 
 export default function BookingFlow() {
+  const {prices,error:priceError,refresh:refreshPrices} = useRentalPrices();
   const [step, setStep] = useState<Step>('home');
   const [pipeQty, setPipeQty] = useState(1);
   const [premiumQty, setPremiumQty] = useState(0);
@@ -303,12 +305,12 @@ export default function BookingFlow() {
   const additionalFlavourUnits = Math.max(0, flavourUnits - hookahUnits);
   const total = useMemo(
     () =>
-      pipeQty * 650 +
-      premiumQty * 850 +
-      additionalFlavourUnits * 50 +
-      coalPackQty * 30 +
-      stoveQty * 200,
-    [pipeQty, premiumQty, additionalFlavourUnits, coalPackQty, stoveQty],
+      Math.round((pipeQty * Math.round((prices?.pipe ?? 0)*100) +
+      premiumQty * Math.round((prices?.premium ?? 0)*100) +
+      additionalFlavourUnits * 5000 +
+      coalPackQty * 3000 +
+      stoveQty * Math.round((prices?.stove ?? 0)*100)))/100,
+    [pipeQty, premiumQty, additionalFlavourUnits, coalPackQty, stoveQty,prices],
   );
   const collectionDay = date.split('T')[0] || '';
   const collectionTime = date.split('T')[1] || '';
@@ -471,6 +473,7 @@ export default function BookingFlow() {
     setEditingSuggestion(null);
   }
   async function finish() {
+    if (!prices || priceError) { setValidationMessage('Please wait for current prices or retry.'); void refreshPrices(); return; }
     const bookingDate = new Date(date);
     const validTime =
       date.includes('T') &&
@@ -668,14 +671,15 @@ export default function BookingFlow() {
         <section className="product-sheet">
           <div className="sheet-title">
             <span>Choose your setup</span>
-            <strong>{money(total)}</strong>
+            <strong>{prices ? money(total) : '—'}</strong>
           </div>
+          {priceError && <p role="alert">{priceError} <button onClick={() => void refreshPrices()}>Retry</button></p>}
           <div className="product-carousel">
             <article className="flow-product selected">
               <div className="product-photo">
                 <img src="/classic-hookah.webp" alt="Classic hookah" />
               </div>
-              <h2>Classic hookah · 2 pipes · R650</h2>
+              <h2>Classic hookah · 2 pipes · {prices ? money(prices.pipe) : 'Loading price…'}</h2>
               <p>1 flavour · 8 coconut coals · 4 disposable mouthpieces · Tongs.</p>
               <Quantity value={pipeQty} onChange={setPipeQty} min={0} />
             </article>
@@ -683,7 +687,7 @@ export default function BookingFlow() {
               <div className="product-photo">
                 <img src="/hookah-hero.webp" alt="Premium hookah" />
               </div>
-              <h2>Premium hookah · 2 pipes · R850</h2>
+              <h2>Premium hookah · 2 pipes · {prices ? money(prices.premium) : 'Loading price…'}</h2>
               <p>1 flavour · 8 coconut coals · 4 disposable mouthpieces · Tongs.</p>
               <Quantity value={premiumQty} onChange={setPremiumQty} min={0} />
             </article>
@@ -714,7 +718,7 @@ export default function BookingFlow() {
               </i>
               <span>
                 <strong>Coal stove</strong>
-                <small>R200</small>
+                <small>{prices ? money(prices.stove) : 'Loading price…'}</small>
               </span>
               <Quantity value={stoveQty} onChange={setStoveQty} min={0} />
             </div>

@@ -27,7 +27,7 @@ export function toAdminBooking(row: Record<string, any>): AdminBooking {
   const extra = Math.max(0, units - (Number(quantities.pipe) || 0) - (Number(quantities.premium) || 0));
   if (extra) items.push([`Additional flavour units × ${extra}`, extra * (order.extraFlavourPrice ?? 50)]);
   // Keep the stored total authoritative when historical pricing differs.
-  const difference = Number(row.rental_total) - items.reduce((sum, [, price]) => sum + price, 0);
+  const difference = (Math.round(Number(row.rental_total)*100) - items.reduce((sum, [, price]) => sum + Math.round(price*100), 0))/100;
   if (difference) items.push(['Recorded pricing adjustment', difference]);
   if (Number(row.deposit) > 0) items.push(['Historical refundable deposit', Number(row.deposit)]);
   const start = String(row.rental_date);

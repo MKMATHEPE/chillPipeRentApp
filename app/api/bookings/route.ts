@@ -3,6 +3,7 @@ import { isPaymentMethod } from '@/lib/payment-methods';
 import { BookingInputError, priceBooking } from '@/lib/booking-pricing';
 import { verifyDeliveryQuote } from '@/lib/delivery-quotes';
 import { expirePendingBookings } from '@/lib/booking-expiry';
+import { rentalPrices } from '@/lib/inventory-server';
 
 const json = (data: unknown, status = 200) => Response.json(data, { status, headers: { 'Cache-Control': 'no-store' } });
 const clean = (value: unknown, max = 200) =>
@@ -26,7 +27,7 @@ export async function POST(request: Request) {
         { error: 'Name, phone, rental date and location are required.' },
         400,
       );
-    const priced = priceBooking(body);
+    const priced = priceBooking(body, await rentalPrices());
     const verifiedDelivery = await verifyDeliveryQuote(body);
     const reference = `CP-${crypto.randomUUID().slice(0, 6).toUpperCase()}`;
     const { total } = priced;
@@ -34,9 +35,13 @@ export async function POST(request: Request) {
     // Retain the column for historical records; new rentals require no deposit.
     const deposit = 0;
     const now = Date.now();
-    await getDb()
+    const saved = await getDb()
       .prepare(
-        `INSERT INTO bookings (reference,customer_name,phone,rental_date,location,notes,order_json,rental_total,deposit,delivery_fee,status,payment_method,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,'awaiting_review',?,?,?)`,
+        `INSERT INTO bookings (reference,customer_name,phone,rental_date,location,notes,order_json,rental_total,deposit,delivery_fee,status,payment_method,created_at,updated_at)
+         SELECT ?,?,?,?,?,?,?,?,?,?,'awaiting_review',?,?,?
+         WHERE (SELECT price FROM equipment WHERE id='classic')=?
+           AND (SELECT price FROM equipment WHERE id='premium')=?
+           AND (SELECT price FROM equipment WHERE id='stove')=?`,
       )
       .bind(
         reference,
@@ -61,8 +66,12 @@ export async function POST(request: Request) {
         body.paymentMethod,
         now,
         now,
+        Math.round(priced.unitPrices.pipe*100),
+        Math.round(priced.unitPrices.premium*100),
+        Math.round(priced.unitPrices.stove*100),
       )
       .run();
+    if (!saved.meta.changes) throw new BookingInputError('Prices changed during checkout. Refresh and review the new total before submitting.',409);
     return json(
       {
         reference,

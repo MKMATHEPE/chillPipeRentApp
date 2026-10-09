@@ -170,3 +170,11 @@ Last approved GitHub baseline: `f4ced52ed2b389c07d47eab0161eb6528a0dba98` (`main
 
 - After two small Performance font reductions, user requested the same treatment across all admin tabs. Applied smaller page/card/calendar/detail/dialog headings and prominent amounts to Requests, Bookings and Inventory; retained the approved Performance scale.
 - Readable labels, input sizes, tap targets, customer pages and booking logic remain unchanged. CSS-only change; await owner review before GitHub push.
+
+## Inventory-linked rental prices — 9 October 2026
+
+- Owner confirmed immediate equipment-price updates for new customer bookings; consumables remain outside inventory tracking. Classic, Premium and stove now use saved equipment prices via a public price-only catalogue. Tongs remain included; flavour/coal pricing unchanged.
+- Home and checkout refresh on load/focus, same-browser inventory save and every 30 seconds while visible. Checkout checks again before submission. Server recalculates using inventory and atomically rejects a concurrent price change; stale totals never create an order.
+- Integer-cent calculations support saved decimal prices. New bookings retain price snapshots; existing booking JSON/totals are untouched. Only untouched version-0 legacy defaults upgrade to R650/R850; owner-edited equipment rows are preserved.
+- Tests cover admin save → catalogue → checkout, each equipment price, decimals, stale and racing price updates, historical preservation, database failure, stock and booking lifecycle. React review: shared hook, deduplicated requests, effect cleanup, retry states, checkout acceptance reset. Full TypeScript check still has eight pre-existing errors; no new errors.
+- Await owner testing/acceptance before GitHub push. Prior compact-row and font changes also await approval.

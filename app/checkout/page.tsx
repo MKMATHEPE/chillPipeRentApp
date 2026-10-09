@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { saveBookingHandoff } from '@/lib/booking-handoff';
+import { useRentalPrices } from '@/lib/use-rental-prices';
 import {
   Check,
   Home,
@@ -31,12 +32,6 @@ type Order = {
   };
   total: number;
 };
-const prices: Record<string, number> = {
-  pipe: 650,
-  premium: 850,
-  coalPack: 30,
-  stove: 200,
-};
 const names: Record<string, string> = {
   pipe: 'Classic hookah',
   premium: 'Premium hookah',
@@ -53,12 +48,22 @@ const rentalDate = (value: string) =>
     : 'Not provided';
 
 export default function Checkout() {
+  const {prices:currentPrices,error:priceError,refresh:refreshPrices} = useRentalPrices();
+  const prices: Record<string,number> = currentPrices ?? {};
   const [order, setOrder] = useState<Order | null>(null);
   const [hydrated, setHydrated] = useState(false);
   const [accepted, setAccepted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
   const submitLock = useRef(false);
+  const previousPrices = useRef(currentPrices);
+  useEffect(() => {
+    if (previousPrices.current && currentPrices && JSON.stringify(previousPrices.current)!==JSON.stringify(currentPrices)) {
+      setAccepted(false);
+      setSubmitError('Prices have changed. Review the updated total and accept the terms again.');
+    }
+    previousPrices.current=currentPrices;
+  },[currentPrices]);
   useEffect(() => {
     const raw = localStorage.getItem('chill-pipe-order');
     if (raw) {
@@ -77,19 +82,27 @@ export default function Checkout() {
     return () => window.removeEventListener('chill-pipe-profile-updated', syncProfile);
   }, []);
   async function placeOrder() {
-    if (!order || submitLock.current || submitting || !accepted || !isPaymentMethod(order.paymentMethod)) return;
+    if (!order || !currentPrices || priceError || submitLock.current || submitting || !accepted || !isPaymentMethod(order.paymentMethod)) return;
     submitLock.current = true;
     setSubmitting(true);
     setSubmitError('');
     try {
+      const latest = await refreshPrices();
+      if (!latest) throw new Error('Unable to check current prices. Please retry.');
+      if (JSON.stringify(latest)!==JSON.stringify(currentPrices)) {
+        setAccepted(false);
+        throw new Error('Prices have changed. Review the updated total and accept the terms again.');
+      }
       const response = await fetch('/api/bookings', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ ...order, total: rentalTotal }),
       });
       const booking = await response.json();
-      if (!response.ok)
+      if (!response.ok) {
+        if (response.status===409) { setAccepted(false); await refreshPrices(); }
         throw new Error(booking.error || 'Could not create booking.');
+      }
       saveBookingHandoff(booking);
       try { localStorage.setItem(
         'chill-pipe-booking-access',
@@ -115,10 +128,10 @@ export default function Checkout() {
             .map(([id, q]) => ({
               name: names[id],
               qty: q,
-              amount: q * prices[id],
+              amount: q * Math.round(prices[id]*100)/100,
             }))
         : [],
-    [order],
+    [order,currentPrices],
   );
   const flavourItems = (order?.selectedFlavours || []).map((item) =>
     typeof item === 'string' ? { name: item, quantity: 1 } : item,
@@ -133,7 +146,7 @@ export default function Checkout() {
     (order?.quantities.pipe || 0) + (order?.quantities.premium || 0);
   const additionalFlavourUnits = Math.max(0, flavourUnits - hookahUnits);
   // Reprice unsubmitted drafts so an older saved total cannot disagree with the card.
-  const rentalTotal = lines.reduce((sum, line) => sum + line.amount, 0) + additionalFlavourUnits * 50;
+  const rentalTotal = (lines.reduce((sum, line) => sum + Math.round(line.amount*100), 0) + additionalFlavourUnits * 5000)/100;
   if (!hydrated)
     return (
       <main className="empty-cart checkout-loading" aria-busy="true">
@@ -151,6 +164,7 @@ export default function Checkout() {
       </main>
     );
   const ready =
+    !!currentPrices && !priceError &&
     accepted &&
     isPaymentMethod(order.paymentMethod) &&
     Boolean(
@@ -254,10 +268,10 @@ export default function Checkout() {
           <div className="checkout-total">
             <span>{payOnArrival(order.paymentMethod) ? (order.delivery ? 'Due on delivery' : 'Due on collection') : 'Due after approval'}</span>
             <strong>
-              {money(
+              {currentPrices ? money(
                 rentalTotal +
                   deliveryFee,
-              )}
+              ) : 'Loading prices…'}
             </strong>
           </div>
           <div className="checkout-session-details">
@@ -310,6 +324,7 @@ export default function Checkout() {
             <Check />
           </div>
         </section>
+        {priceError && <p role="alert">{priceError} <button onClick={() => void refreshPrices()}>Retry</button></p>}
         <label className="checkout-flow-accept">
           <input
             type="checkbox"

@@ -30,7 +30,9 @@ export default function Inventory({ equipment, allocations, onSave }: {
       setError('Enter a price above R0 with no more than two decimal places.'); return;
     }
     setSaving(true); setError('');
-    try { await onSave({ ...editing, total, unavailable: blocked, price: editing.price === null ? null : amount }); setEditing(null); }
+    try { await onSave({ ...editing, total, unavailable: blocked, price: editing.price === null ? null : amount });
+      try { localStorage.setItem('chill-pipe-prices-updated',String(Date.now())); } catch { /* Other clients also refresh prices on focus and periodically. */ }
+      setEditing(null); }
     catch (err) { setError(err instanceof Error ? err.message : 'Could not save inventory.'); }
     finally { setSaving(false); }
   }
@@ -43,7 +45,7 @@ export default function Inventory({ equipment, allocations, onSave }: {
       </article>;
     })}
     <details className="cp-stock-help"><summary>How stock works</summary><p className="cp-inventory-note">Each rental reserves a 24-hour period in South Africa time. Separate periods can reuse equipment; overlapping rentals share the stock limit. Reserved shows the highest upcoming simultaneous demand, not the sum of all bookings. Available is the remaining capacity after that peak and equipment out. Out includes returns awaiting inspection and stays blocked until completion. Handover also checks physical stock. Tongs are included with each hookah.</p></details>
-    <Dialog open={!!editing} onOpenChange={open => { if (!open && !saving) setEditing(null); }}><DialogContent className="cp-confirm cp-inventory-dialog"><DialogTitle>Edit {editing?.name.toLowerCase()}</DialogTitle><DialogDescription>Customer prices and existing booking totals will not change.</DialogDescription><form onSubmit={e => { e.preventDefault(); void save(); }}><fieldset disabled={saving} style={{border:0,padding:0,margin:0,minWidth:0}}>
+    <Dialog open={!!editing} onOpenChange={open => { if (!open && !saving) setEditing(null); }}><DialogContent className="cp-confirm cp-inventory-dialog"><DialogTitle>Edit {editing?.name.toLowerCase()}</DialogTitle><DialogDescription>Saved prices apply to new customer bookings. Existing bookings keep their original prices and totals.</DialogDescription><form onSubmit={e => { e.preventDefault(); void save(); }}><fieldset disabled={saving} style={{border:0,padding:0,margin:0,minWidth:0}}>
       <label>Total stock<input type="number" min="0" max="9999" step="1" value={stock} onChange={e => setStock(e.target.value)} /></label>
       <label>Unavailable units<input type="number" min="0" step="1" value={unavailable} onChange={e => setUnavailable(e.target.value)} /></label>
       <p className="cp-inventory-note">Use unavailable for damaged equipment or maintenance. Reserved and out quantities are controlled by bookings.</p>
