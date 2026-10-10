@@ -55,6 +55,8 @@ export default function Track() {
         { cache: 'no-store' },
       );
       const data = await response.json() as Booking & { error?: string };
+      if(response.status===401){setBooking(null);window.location.replace('/customer-login');return;}
+      if(response.status===404)setBooking(null);
       if (!response.ok) throw new Error(data.error || 'Booking not found.');
       setBooking(data);
       setReference(ref);

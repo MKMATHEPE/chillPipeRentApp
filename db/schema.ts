@@ -33,6 +33,7 @@ export const adminLoginLimits = sqliteTable('admin_login_limits', {
 export const bookings=sqliteTable('bookings',{
   id:integer('id').primaryKey({autoIncrement:true}),
   reference:text('reference').notNull().unique(),
+  customerUserId:text('customer_user_id'),
   customerName:text('customer_name').notNull(),
   phone:text('phone').notNull(),
   rentalDate:text('rental_date').notNull(),
@@ -51,4 +52,13 @@ export const bookings=sqliteTable('bookings',{
   completedAt:integer('completed_at'),
   declineReason:text('decline_reason'),
   activityJson:text('activity_json').notNull().default('[]'),
+});
+
+export const customerSessions=sqliteTable('customer_sessions',{
+  tokenHash:text('token_hash').primaryKey(),userId:text('user_id').notNull(),
+  accessToken:text('access_token').notNull(),expiresAt:integer('expires_at').notNull(),
+});
+export const customerProfiles=sqliteTable('customer_profiles',{
+  userId:text('user_id').primaryKey(),fullName:text('full_name').notNull(),phone:text('phone').notNull(),
+  location:text('location').notNull().default(''),alternativePhone:text('alternative_phone').notNull().default(''),updatedAt:integer('updated_at').notNull(),
 });

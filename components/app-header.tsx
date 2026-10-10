@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { cacheCustomerProfile,clearCustomerDevice,type CustomerAccountResponse } from '@/lib/customer-profile';
 import { ArrowLeft, CalendarDays, Check, ChevronRight, CircleHelp, FileText, LogOut, MapPin, Menu, MessageCircle, Pencil, UserRound, X } from 'lucide-react';
 
 type SavedProfile = {
@@ -21,30 +22,17 @@ export function AppHeader({ onBack }: { onBack?: () => void }) {
   const [email, setEmail] = useState('');
   const [location, setLocation] = useState('');
   const [alternativePhone, setAlternativePhone] = useState('');
+  const [signedIn,setSignedIn]=useState(false),[loading,setLoading]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState('');
 
   useEffect(() => {
-    try {
-      const saved = JSON.parse(localStorage.getItem('chill-pipe-profile') || '{}');
-      const draft = JSON.parse(localStorage.getItem('chill-pipe-draft') || '{}');
-      const order = JSON.parse(localStorage.getItem('chill-pipe-order') || '{}');
-      const booking = JSON.parse(localStorage.getItem('chill-pipe-booking-access') || '{}');
-      const nextProfile = {
-        fullName: saved.fullName || (order.customer?.name !== 'Customer' ? order.customer?.name : ''),
-        phone: saved.phone || draft.phone || order.customer?.phone || booking.phone,
-        email: saved.email,
-        location: saved.location || draft.address || order.customer?.location,
-        alternativePhone: saved.alternativePhone,
-        bookingReference: booking.reference,
-      };
-      setProfile(nextProfile);
-      setFullName(nextProfile.fullName || '');
-      setPhone(nextProfile.phone || '');
-      setEmail(nextProfile.email || '');
-      setLocation(nextProfile.location || '');
-      setAlternativePhone(nextProfile.alternativePhone || '');
-    } catch {
-      setProfile({});
-    }
+    if(panel!=='profile')return;
+    const controller=new AbortController();setLoading(true);setError('');setEditing(false);setSignedIn(false);setProfile({});
+    void fetch('/api/customer/auth/session',{cache:'no-store',signal:controller.signal}).then(async r=>{
+      if(r.status===401){setSignedIn(false);setProfile({});return;}
+      const data=await r.json() as CustomerAccountResponse;if(!r.ok)throw new Error(data.error);
+      const p=data.profile;if(cacheCustomerProfile(p)){window.location.href='/';return;}setSignedIn(true);setProfile(p);setFullName(p.fullName || '');setPhone(p.phone || '');setEmail(p.email || '');setLocation(p.location || '');setAlternativePhone(p.alternativePhone || '');
+    }).catch(e=>{if(!controller.signal.aborted)setError(e.message || 'Could not load profile. Close and reopen to retry.');}).finally(()=>{if(!controller.signal.aborted)setLoading(false);});
+    return ()=>controller.abort();
   }, [panel]);
 
   useEffect(() => {
@@ -54,51 +42,20 @@ export function AppHeader({ onBack }: { onBack?: () => void }) {
     return () => document.removeEventListener('keydown', close);
   }, [panel]);
 
-  const trackHref = profile.bookingReference
-    ? `/track?reference=${encodeURIComponent(profile.bookingReference)}&phone=${encodeURIComponent(profile.phone || '')}`
-    : '/track';
-
-  function saveProfile() {
-    const nextProfile = {
-      ...profile,
-      fullName: fullName.trim(),
-      phone: phone.trim(),
-      email: email.trim(),
-      location: location.trim(),
-      alternativePhone: alternativePhone.trim(),
-    };
-    localStorage.setItem('chill-pipe-profile', JSON.stringify(nextProfile));
-    const rawDraft = localStorage.getItem('chill-pipe-draft');
-    if (rawDraft) {
-      try {
-        const draft = JSON.parse(rawDraft);
-        localStorage.setItem('chill-pipe-draft', JSON.stringify({ ...draft, phone: nextProfile.phone, address: nextProfile.location }));
-      } catch {}
-    }
-    const rawOrder = localStorage.getItem('chill-pipe-order');
-    if (rawOrder) {
-      try {
-        const order = JSON.parse(rawOrder);
-        localStorage.setItem('chill-pipe-order', JSON.stringify({
-          ...order,
-          customer: {
-            ...order.customer,
-            name: nextProfile.fullName || order.customer?.name,
-            phone: nextProfile.phone,
-            location: nextProfile.location || order.customer?.location,
-          },
-        }));
-      } catch {}
-    }
-    setProfile(nextProfile);
-    setEditing(false);
-    window.dispatchEvent(new CustomEvent('chill-pipe-profile-updated', { detail: nextProfile }));
+  async function saveProfile() {
+    if(busy)return;setBusy(true);setError('');
+    try{
+      const r=await fetch('/api/customer/profile',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({fullName,phone,location,alternativePhone})});
+      const data=await r.json() as CustomerAccountResponse;if(!r.ok)throw new Error(data.error || 'Could not save details.');
+      cacheCustomerProfile(data.profile);setProfile(data.profile);setEditing(false);
+      // Do not silently replace a quoted rental address with a saved profile address.
+      window.dispatchEvent(new CustomEvent('chill-pipe-profile-updated',{detail:{fullName:data.profile.fullName,phone:data.profile.phone}}));
+    }catch(e){setError(e instanceof Error?e.message:'Could not save details.');}finally{setBusy(false);}
   }
 
-  function logOut() {
+  async function logOut() {
     if (!window.confirm('Log out and clear your saved details from this device?')) return;
-    ['chill-pipe-profile', 'chill-pipe-booking-access', 'chill-pipe-order', 'chill-pipe-draft'].forEach((key) => localStorage.removeItem(key));
-    window.location.href = '/';
+    setBusy(true);setError('');try{const r=await fetch('/api/customer/auth/logout',{method:'POST'});if(!r.ok)throw new Error('Could not log out. Please retry.');clearCustomerDevice();window.location.href='/';}catch(e){setError(e instanceof Error?e.message:'Could not log out.');setBusy(false);}
   }
 
   return <>
@@ -122,13 +79,14 @@ export function AppHeader({ onBack }: { onBack?: () => void }) {
           <span className="header-panel-handle" />
           <div className="header-panel-title"><h2>{panel === 'profile' ? 'Profile' : 'Menu'}</h2></div>
         {panel === 'profile' ? <div className="profile-panel-content">
-          {editing ? <div className="profile-edit-form">
+          {error&&<p role="alert">{error}</p>}
+          {loading?<p role="status">Loading account…</p>:!signedIn?<><p>Sign in to save your details and manage your rentals.</p><a className="header-panel-link" href="/customer-login"><UserRound/><span>Sign in</span><ChevronRight/></a><a className="header-panel-link" href="/customer-login?mode=signup"><span>Create account</span><ChevronRight/></a></>:editing ? <div className="profile-edit-form">
             <label><span>Full name</span><input autoComplete="name" value={fullName} onChange={(event) => setFullName(event.target.value)} placeholder="Enter your full name" /></label>
             <label><span>Contact number</span><input type="tel" inputMode="tel" autoComplete="tel" value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="e.g. 076 850 5523" /></label>
-            <label><span>Email address</span><input type="email" inputMode="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="Enter your email address" /></label>
+            <label><span>Email address</span><input type="email" autoComplete="email" value={email} readOnly /></label>
             <label><span>Delivery address</span><textarea autoComplete="street-address" value={location} onChange={(event) => setLocation(event.target.value)} placeholder="Enter your delivery address" /></label>
             <label><span>Alternative contact number <em>Optional</em></span><input type="tel" inputMode="tel" autoComplete="tel" value={alternativePhone} onChange={(event) => setAlternativePhone(event.target.value)} placeholder="Enter another contact number" /></label>
-            <div><button onClick={() => setEditing(false)}>Cancel</button><button className="profile-save" onClick={saveProfile} disabled={!phone.trim()}><Check /> Save details</button></div>
+            <div><button disabled={busy} onClick={() => setEditing(false)}>Cancel</button><button className="profile-save" onClick={()=>void saveProfile()} disabled={busy || !phone.trim() || !fullName.trim()}><Check /> {busy?'Saving…':'Save details'}</button></div>
           </div> : <>
             <section className="profile-contact-summary">
               <UserRound />
@@ -142,9 +100,10 @@ export function AppHeader({ onBack }: { onBack?: () => void }) {
               <MapPin />
               <span><small>Delivery address</small><strong title={profile.location}>{profile.location || 'No address saved'}</strong></span>
             </section>
-            <a className="header-panel-link" href={trackHref}><CalendarDays /><span>My bookings</span><ChevronRight /></a>
+            <a className="header-panel-link" href="/my-bookings"><CalendarDays /><span>My bookings</span><ChevronRight /></a>
             <button className="profile-edit" onClick={() => setEditing(true)}><Pencil /> Edit details</button>
-            <button className="profile-logout" onClick={logOut}><LogOut /> Log out</button>
+            <a className="header-panel-link" href="/customer-reset"><span>Reset password</span><ChevronRight/></a>
+            <button className="profile-logout" disabled={busy} onClick={()=>void logOut()}><LogOut /> Log out</button>
           </>}
         </div> : <nav className="header-panel-menu">
           <a href="/how-it-works"><CircleHelp /><span>How it works</span><ChevronRight /></a>

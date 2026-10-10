@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { saveBookingHandoff } from '@/lib/booking-handoff';
 import { useRentalPrices } from '@/lib/use-rental-prices';
+import { cacheCustomerProfile,type CustomerAccountResponse } from '@/lib/customer-profile';
 import {
   Check,
   Home,
@@ -52,6 +53,18 @@ export default function Checkout() {
   const prices: Record<string,number> = currentPrices ?? {};
   const [order, setOrder] = useState<Order | null>(null);
   const [hydrated, setHydrated] = useState(false);
+  const [accountReady,setAccountReady]=useState(false),[accountError,setAccountError]=useState(''),[accountAttempt,setAccountAttempt]=useState(0);
+  useEffect(()=>{
+    const controller=new AbortController();setAccountError('');
+    void fetch('/api/customer/auth/session',{cache:'no-store',signal:controller.signal}).then(async r=>{
+      if(r.status===401){window.location.replace('/customer-login?next=%2Fcheckout');return;}
+      const data=await r.json() as CustomerAccountResponse;if(!r.ok)throw new Error(data.error || 'Could not verify your account.');
+      if(cacheCustomerProfile(data.profile)){setOrder(null);setAccountReady(true);return;}
+      // Keep rental address/date/quote intact; use the account's contact identity.
+      setOrder(current=>{if(!current)return current;const updated={...current,customer:{...current.customer,name:data.profile.fullName || current.customer.name,phone:data.profile.phone || current.customer.phone}};try{localStorage.setItem('chill-pipe-order',JSON.stringify(updated));}catch{}return updated;});
+      setAccountReady(true);
+    }).catch(e=>{if(!controller.signal.aborted)setAccountError(e.message || 'Could not verify your account.');});return ()=>controller.abort();
+  },[accountAttempt]);
   const [accepted, setAccepted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
@@ -74,15 +87,15 @@ export default function Checkout() {
       }
     }
     setHydrated(true);
-    const syncProfile = () => {
+    const syncProfile = (event:Event) => {
       const updated = localStorage.getItem('chill-pipe-order');
-      if (updated) setOrder(JSON.parse(updated));
+      if (updated) {try{const saved=JSON.parse(updated);const p=(event as CustomEvent<{fullName?:string;phone?:string}>).detail;const next={...saved,customer:{...saved.customer,name:p.fullName || saved.customer.name,phone:p.phone || saved.customer.phone}};setOrder(next);localStorage.setItem('chill-pipe-order',JSON.stringify(next));}catch{}}
     };
     window.addEventListener('chill-pipe-profile-updated', syncProfile);
     return () => window.removeEventListener('chill-pipe-profile-updated', syncProfile);
   }, []);
   async function placeOrder() {
-    if (!order || !currentPrices || priceError || submitLock.current || submitting || !accepted || !isPaymentMethod(order.paymentMethod)) return;
+    if (!accountReady || !order || !currentPrices || priceError || submitLock.current || submitting || !accepted || !isPaymentMethod(order.paymentMethod)) return;
     submitLock.current = true;
     setSubmitting(true);
     setSubmitError('');
@@ -98,8 +111,9 @@ export default function Checkout() {
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ ...order, total: rentalTotal }),
       });
-      const booking = await response.json();
+      const booking = await response.json() as {error?:string;reference:string};
       if (!response.ok) {
+        if(response.status===401){window.location.href='/customer-login?next=%2Fcheckout';return;}
         if (response.status===409) { setAccepted(false); await refreshPrices(); }
         throw new Error(booking.error || 'Could not create booking.');
       }
@@ -147,7 +161,8 @@ export default function Checkout() {
   const additionalFlavourUnits = Math.max(0, flavourUnits - hookahUnits);
   // Reprice unsubmitted drafts so an older saved total cannot disagree with the card.
   const rentalTotal = (lines.reduce((sum, line) => sum + Math.round(line.amount*100), 0) + additionalFlavourUnits * 5000)/100;
-  if (!hydrated)
+  if(accountError)return <main className="empty-cart"><h1>We couldn’t check your account</h1><p role="alert">{accountError}</p><button onClick={()=>setAccountAttempt(n=>n+1)}>Retry</button><a href="/customer-login?next=%2Fcheckout">Sign in</a></main>;
+  if (!hydrated || !accountReady)
     return (
       <main className="empty-cart checkout-loading" aria-busy="true">
         <span className="checkout-loading-mark" />

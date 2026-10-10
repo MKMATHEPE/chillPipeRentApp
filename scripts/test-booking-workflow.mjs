@@ -15,6 +15,7 @@ const db = { prepare(query) {
   return prepared;
 } };
 let authenticated = true;
+let customerId = 'customer-one';
 const auth = { AUTH_HEADERS: { 'Cache-Control': 'no-store' }, sameOrigin: req => req.headers.get('origin') === new URL(req.url).origin, verifyAdmin: async () => authenticated ? { id: 'test-owner' } : null };
 const modules = {};
 function load(file) {
@@ -23,6 +24,7 @@ function load(file) {
   const require = name => {
     if (name.endsWith('/db')) return { getDb: () => db };
     if (name.endsWith('/admin-auth')) return auth;
+    if (name.endsWith('/customer-auth')) return {verifyCustomer:async()=>customerId?{id:customerId,email:'customer@example.invalid'}:null,AUTH_HEADERS:{'Cache-Control':'no-store'}};
     if (name.endsWith('/admin-bookings')) return modules.bookings;
     if (name.endsWith('/payment-methods')) return modules.payment;
     if (name.endsWith('/booking-pricing')) return modules.pricing;
@@ -104,7 +106,7 @@ for (const invalid of [
   assert.equal(sql.prepare('SELECT count(*) AS n FROM bookings').get().n,0);
 }
 for (const malformed of ['{', 'null', '[]']) {
-  assert.equal((await client.POST(new Request('https://app.example/api/bookings',{method:'POST',body:malformed}))).status,400);
+  assert.equal((await client.POST(new Request('https://app.example/api/bookings',{method:'POST',headers:{origin:'https://app.example'},body:malformed}))).status,400);
 }
 assert.equal(modules.pricing.priceBooking({...order,selectedFlavours:['Gum & Mint','Gum & Mint','Gum & Mint']}).total,1810);
 assert.equal(modules.pricing.priceBooking({...order,selectedFlavours:[{name:'Gum & Mint',quantity:1},{name:'Gum & Mint',quantity:2}]}).selectedFlavours[0].quantity,3);
@@ -125,10 +127,23 @@ const homeSource=readFileSync('app/page.tsx','utf8'),checkoutSource=readFileSync
 assert.ok(checkoutSource.includes('useRentalPrices'));assert.ok(homeSource.includes('useRentalPrices'));
 assert.ok(homeSource.includes('money(prices.pipe)'));assert.ok(homeSource.includes('money(prices.premium)'));
 console.log('PASS single/mixed hookahs, included flavours, extra coal packs/stoves, unpriced suggestions, ignored injected prices, zero collection fee, historical totals and client/server price parity');
-let response = await client.POST(req('/api/bookings', order));
+customerId='';
+assert.equal((await client.POST(req('/api/bookings',order))).status,401);
+customerId='customer-one';
+assert.equal((await client.POST(req('/api/bookings',order,'POST','https://evil.invalid'))).status,403);
+let response = await client.POST(req('/api/bookings', {...order,customer_user_id:'forged-owner'}));
 assert.equal(response.status, 201);
 const created = await response.json();
 const reference = created.reference;
+assert.equal(sql.prepare('SELECT customer_user_id FROM bookings WHERE reference=?').get(reference).customer_user_id,'customer-one');
+customerId='customer-two';
+assert.equal((await client.GET(req('/api/bookings?reference='+reference+'&phone=0000000000',undefined,'GET'))).status,404);
+assert.equal((await payment.POST(req('/api/bookings/payment',{reference,phone:'0000000000',method:'eft'}))).status,404);
+customerId='';
+assert.equal((await client.GET(req('/api/bookings?reference='+reference+'&phone=0000000000',undefined,'GET'))).status,401);
+assert.equal((await payment.POST(req('/api/bookings/payment',{reference,phone:'0000000000',method:'eft'}))).status,401);
+customerId='customer-one';
+console.log('PASS checkout requires account, ignores forged ownership, protects tracking/payment across customers and rejects cross-origin submission');
 const fetchAdmin = async () => (await (await admin.GET(req('/api/admin/bookings', undefined, 'GET'))).json()).bookings;
 let booking = (await fetchAdmin())[0];
 assert.equal(booking.id, reference); assert.equal(booking.status, 'Pending'); assert.equal(booking.name, order.customer.name);

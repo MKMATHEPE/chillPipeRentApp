@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { AppHeader } from '@/components/app-header';
 import { useRentalPrices } from '@/lib/use-rental-prices';
+import { cacheCustomerProfile,type CustomerAccountResponse } from '@/lib/customer-profile';
 
 type Step = 'home' | 'flavours' | 'delivery';
 type Flavour = { id: string; name: string; description: string; image: string };
@@ -364,6 +365,15 @@ export default function BookingFlow() {
     if (requested === 'flavours' || requested === 'delivery')
       setStep(requested);
     setDraftReady(true);
+    const controller=new AbortController();
+    void fetch('/api/customer/auth/session',{cache:'no-store',signal:controller.signal}).then(async r=>{
+      if(!r.ok)return;const {profile}=await r.json() as CustomerAccountResponse;if(cacheCustomerProfile(profile)){window.location.reload();return;}
+      setPhone(current=>current || profile.phone || '');
+      // Only prefill an empty delivery address; a confirmed delivery quote is never overwritten.
+      setAddress(current=>current || profile.location || '');
+      setDeliveryAddress(current=>current || profile.location || '');
+    }).catch(()=>{});
+    return ()=>controller.abort();
   }, []);
   useEffect(() => {
     const syncProfile = (event: Event) => {

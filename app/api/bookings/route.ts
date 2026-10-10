@@ -4,6 +4,8 @@ import { BookingInputError, priceBooking } from '@/lib/booking-pricing';
 import { verifyDeliveryQuote } from '@/lib/delivery-quotes';
 import { expirePendingBookings } from '@/lib/booking-expiry';
 import { rentalPrices } from '@/lib/inventory-server';
+import { verifyCustomer } from '@/lib/customer-auth';
+import { sameOrigin } from '@/lib/admin-auth';
 
 const json = (data: unknown, status = 200) => Response.json(data, { status, headers: { 'Cache-Control': 'no-store' } });
 const clean = (value: unknown, max = 200) =>
@@ -12,6 +14,9 @@ const clean = (value: unknown, max = 200) =>
     .slice(0, max);
 export async function POST(request: Request) {
   try {
+    if(!sameOrigin(request))return json({error:'Request not allowed.'},403);
+    const account=await verifyCustomer(request.headers.get('cookie'));
+    if(!account)return json({error:'Sign in before checkout.'},401);
     let body: Record<string, any>;
     try { body = await request.json(); } catch { return json({ error: 'Invalid booking request.' }, 400); }
     if (!body || typeof body !== 'object' || Array.isArray(body)) return json({ error: 'Invalid booking request.' }, 400);
@@ -37,8 +42,8 @@ export async function POST(request: Request) {
     const now = Date.now();
     const saved = await getDb()
       .prepare(
-        `INSERT INTO bookings (reference,customer_name,phone,rental_date,location,notes,order_json,rental_total,deposit,delivery_fee,status,payment_method,created_at,updated_at)
-         SELECT ?,?,?,?,?,?,?,?,?,?,'awaiting_review',?,?,?
+        `INSERT INTO bookings (reference,customer_name,phone,rental_date,location,notes,order_json,rental_total,deposit,delivery_fee,status,payment_method,created_at,updated_at,customer_user_id)
+         SELECT ?,?,?,?,?,?,?,?,?,?,'awaiting_review',?,?,?,?
          WHERE (SELECT price FROM equipment WHERE id='classic')=?
            AND (SELECT price FROM equipment WHERE id='premium')=?
            AND (SELECT price FROM equipment WHERE id='stove')=?`,
@@ -66,6 +71,7 @@ export async function POST(request: Request) {
         body.paymentMethod,
         now,
         now,
+        account.id,
         Math.round(priced.unitPrices.pipe*100),
         Math.round(priced.unitPrices.premium*100),
         Math.round(priced.unitPrices.stove*100),
@@ -102,6 +108,12 @@ export async function GET(request: Request) {
     const phone = clean(url.searchParams.get('phone'), 40);
     if (!reference || !phone)
       return json({ error: 'Reference and phone number are required.' }, 400);
+    const owner=await getDb().prepare('SELECT customer_user_id FROM bookings WHERE reference=? AND phone=?').bind(reference,phone).first<{customer_user_id:string|null}>();
+    if(owner?.customer_user_id){
+      const account=await verifyCustomer(request.headers.get('cookie'));
+      if(!account)return json({error:'Sign in to view this booking.'},401);
+      if(account.id!==owner.customer_user_id)return json({error:'Booking not found.'},404);
+    }
     await expirePendingBookings();
     const row = await getDb()
       .prepare(
