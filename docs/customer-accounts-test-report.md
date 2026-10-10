@@ -1,5 +1,8 @@
 # Customer accounts: no-cost local verification
 
+## Follow-up: baseline type errors resolved (2026-10-10)
+The unpublished account milestone was backed up to GitHub branch `codex/customer-accounts-local-validation` at `084aaa6`. The subsequent local type-only fix adds explicit response types in the payment page and declares the optional Cloudflare D1 `DB` binding. The existing database-unavailable guard remains unchanged. `npx tsc --noEmit` now exits 0. The original report below is retained as historical evidence; its five-error blocker is resolved. No UI, pricing, payment processing, authentication settings or deployment changed.
+
 Date: 2026-10-10. Unpublished working tree based on b1c9e0d.
 
 ## Scope and safety
@@ -37,7 +40,7 @@ These files were not modified in this milestone. No new failing assertions were 
 - Real verification/reset email delivery, exact allowed redirects and provider eligibility.
 - Full browser signup/confirmation/login/reset/checkout with a controlled test account after email setup; mobile/touch and slow-network review. Prior local visual review is not a substitute for this journey.
 - Real customer/admin integration and production-level concurrency verification using authorized test data.
-- Resolve known type errors before treating the release as clean.
+- Baseline type errors resolved in the follow-up above; remaining release gates still apply.
 - Decide public access separately; current private sharing stays unchanged.
 
 ## Assessment

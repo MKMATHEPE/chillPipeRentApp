@@ -40,7 +40,7 @@ Implemented locally on 2026-10-10. Unpublished; user approved a GitHub backup on
 - `node scripts/test-customer-auth.mjs`: validation, confirmation destination, session/cookie isolation, profile ownership, same-phone account isolation, no historical auto-claim, expiry/logout, recovery/replay/rate limits pass with fake identity provider and isolated SQLite.
 - `node scripts/test-booking-workflow.mjs`: new account requirement and cross-account booking/payment isolation plus existing rental lifecycle/inventory/price tests pass.
 - Existing admin auth, Performance and request-alert tests pass.
-- TypeScript reports five pre-existing errors in `app/payment/page.tsx` and `db/index.ts`; no errors in new customer-account code.
+- TypeScript follow-up: all five baseline errors resolved using payment-response types and the Cloudflare DB binding declaration; `npx tsc --noEmit` passes. No runtime behaviour changed.
 - Live email delivery, callback configuration and customer signup are NOT yet verified.
 
 References: https://supabase.com/docs/guides/auth/auth-smtp and https://supabase.com/docs/guides/auth/redirect-urls
