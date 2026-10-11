@@ -8,6 +8,8 @@ export default function AdminSignOut() {
   const [email,setEmail]=useState(''),[error,setError]=useState(''),[message,setMessage]=useState('');
   const [changing,setChanging]=useState(false),[current,setCurrent]=useState(''),[password,setPassword]=useState(''),[confirmation,setConfirmation]=useState('');
   const lock=useRef(false);
+  const [testMode,setTestMode]=useState(false);
+  const [managedMode,setManagedMode]=useState(false);
   const clearPasswords=()=>{setCurrent('');setPassword('');setConfirmation('');};
   async function loadAccount() {
     setLoading(true);setError('');setEmail('');
@@ -17,6 +19,7 @@ export default function AdminSignOut() {
       const data=await response.json() as {email?:string};
       if(!response.ok || !data.email) throw new Error('Could not load your account. Please retry.');
       setEmail(data.email);
+      const mode=await fetch('/api/customer/auth/mode',{cache:'no-store'}).then(r=>r.json()) as {testMode?:boolean;managedAccounts?:boolean};setTestMode(mode.testMode===true);setManagedMode(mode.managedAccounts===true);
     } catch(err){setError(err instanceof Error?err.message:'Could not load account.');}
     finally{setLoading(false);}
   }
@@ -42,6 +45,8 @@ export default function AdminSignOut() {
       <DialogContent className="cp-account-dialog"><DialogTitle>Admin account</DialogTitle><DialogDescription>Manage your sign-in details.</DialogDescription>
         {loading?<p role="status">Loading account…</p>:email&&<div className="cp-account-email"><span>Signed in as</span><strong>{email}</strong></div>}
         {error&&<p role="alert">{error}</p>}{message&&<p role="status">{message}</p>}
+        {email&&testMode&&<a className="cp-account-primary" href="/admin-test-customers">Manage test customers</a>}
+        {email&&managedMode&&<a className="cp-account-primary" href="/admin-customers">Manage customers</a>}
         {changed?<a className="cp-account-primary" href="/admin-login">Sign in</a>:<>
           {!email&&!loading&&<button disabled={busy} onClick={()=>void loadAccount()}>Retry</button>}
           {email&&<><button disabled={busy} onClick={()=>{setChanging(!changing);clearPasswords();setError('');setMessage('');}}>{changing?'Cancel password change':'Change password'}</button>

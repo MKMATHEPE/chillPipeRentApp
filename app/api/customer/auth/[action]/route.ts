@@ -2,11 +2,14 @@ import { getDb } from '../../../../../db';
 import { allowLogin,authClient,authConfig,digest,sameOrigin } from '../../../../../lib/admin-auth';
 import { recoveryBody,recoveryConfig } from '../../../../../lib/admin-recovery';
 import { AUTH_HEADERS,customerCookie,customerProfile,revokeCustomer,startCustomer,verifyCustomer } from '../../../../../lib/customer-auth';
+import {testCustomersEnabled,loginTestCustomer,changeTestPassword} from '../../../../../lib/test-customers';
+import {managedAccountsEnabled,customerAccess,replaceCustomerPassword,CustomerInputError} from '../../../../../lib/customer-management';
 const reply=(body:unknown,status=200,headers={})=>Response.json(body,{status,headers:{...AUTH_HEADERS,...headers}});
 const emailValue=(v:unknown)=>typeof v==='string' && v.length<=254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim())?v.trim().toLowerCase():null;
 // Use the configured production origin, never a submitted redirect or Host header.
 const destination=(path:string)=>new URL(path,recoveryConfig().redirectTo).href;
 export async function GET(request:Request){
+  if(new URL(request.url).pathname.endsWith('/mode'))return reply({testMode:testCustomersEnabled,managedAccounts:!testCustomersEnabled&&managedAccountsEnabled()});
   if(!new URL(request.url).pathname.endsWith('/session'))return reply({error:'Not found.'},404);
   try {const user=await verifyCustomer(request.headers.get('cookie'));return user?reply({profile:await customerProfile(user.id,user.email)}):reply({error:'Sign in to continue.'},401);}
   catch{return reply({error:'Account is temporarily unavailable. Please retry.'},503);}
@@ -14,13 +17,31 @@ export async function GET(request:Request){
 export async function POST(request:Request){
   if(!sameOrigin(request))return reply({error:'Request not allowed.'},403);
   const action=new URL(request.url).pathname.split('/').pop();
-  if(!['login','signup','logout','recover','reset','resend'].includes(action || ''))return reply({error:'Not found.'},404);
+  if(!['login','signup','logout','recover','reset','resend','change-password',...(testCustomersEnabled?['change-test-password']:[])].includes(action || ''))return reply({error:'Not found.'},404);
   try {
     if(action==='logout'){await revokeCustomer(request.headers.get('cookie'));return reply({ok:true},200,{'Set-Cookie':customerCookie(request,'',0)});}
     const sendsEmail=['signup','recover','resend'].includes(action!);
     if(!await allowLogin(request,'customer-'+action,sendsEmail?3:10,sendsEmail?3600000:600000))return reply({error:'Too many attempts. Please try again later.'},429);
     let body;try{body=await recoveryBody(request);}catch{return reply({error:'Invalid request.'},400);}
     if(!body || Array.isArray(body))return reply({error:'Invalid request.'},400);
+    if(testCustomersEnabled){
+      if(action==='change-test-password'){
+        try{await changeTestPassword(request.headers.get('cookie'),body);return reply({ok:true},200,{'Set-Cookie':customerCookie(request,'',0)});}
+        catch(error){return reply({error:error instanceof Error?error.message:'Could not change password.'},400);}
+      }
+      if(action!=='login')return reply({error:'Test accounts are managed by the administrator. Email signup and recovery are disabled here.'},403);
+      const email=emailValue(body.email);
+      if(!email||typeof body.password!=='string'||!body.password||body.password.length>128)return reply({error:'Enter your test email and password.'},400);
+      const result=await loginTestCustomer(email,body.password);
+      if(!result)return reply({error:'Unable to sign in. Check your test details or contact the administrator.'},401);
+      const cookie=await startCustomer(request,result.user,result.session);
+      return reply({ok:true,requiresPasswordChange:result.requiresPasswordChange,profile:await customerProfile(result.user.id,result.user.email || '')},200,{'Set-Cookie':cookie});
+    }
+    if(action==='change-password'){
+      await replaceCustomerPassword(request.headers.get('cookie'),body);
+      return reply({ok:true},200,{'Set-Cookie':customerCookie(request,'',0)});
+    }
+    if(managedAccountsEnabled() && ['signup','recover','reset','resend'].includes(action!))return reply({error:'Contact The Chill Pipe to create or recover your account. Email signup and recovery are not available yet.'},403);
     if(action==='reset'){
       if(typeof body.accessToken!=='string' || !body.accessToken || body.accessToken.length>8192)return reply({error:'Open a fresh password-reset link.'},401);
       if(typeof body.password!=='string' || body.password.length<12 || body.password.length>128)return reply({error:'Use 12–128 characters for your password.'},400);
@@ -51,9 +72,13 @@ export async function POST(request:Request){
       if(error)return reply({error:error.status===429?'Please wait before requesting another email.':'Could not create the account. Try signing in or resetting your password.'},error.status===429?429:400);
       return reply({ok:true,message:'Check your email to confirm your account, then sign in. Already registered? Sign in or reset your password.'});
     }
+    const beforeLogin=await getDb().prepare('SELECT revision FROM managed_customers WHERE email=?').bind(email).first<{revision:number}>();
+    const expectedRevision=beforeLogin?.revision ?? 0;
     const {data,error}=await client.auth.signInWithPassword({email,password:body.password});
     if(error || !data.user?.email_confirmed_at || !data.session)return reply({error:'Unable to sign in. Check your details and confirm your email first.'},error?.status===429?429:401);
-    const cookie=await startCustomer(request,data.user,data.session);
-    return reply({ok:true,profile:await customerProfile(data.user.id,data.user.email || '')},200,{'Set-Cookie':cookie});
-  }catch{console.error('customer_auth_unavailable');return reply({error:'Account service is temporarily unavailable. Please try again.'},503);}
+    const access=await customerAccess(data.user,expectedRevision,true);
+    if(!access.allowed)return reply({error:'This account is not available. Contact The Chill Pipe for help.'},403);
+    const cookie=await startCustomer(request,data.user,data.session,expectedRevision);
+    return reply({ok:true,requiresPasswordChange:access.pending,...(!access.pending?{profile:await customerProfile(data.user.id,data.user.email || '')}:{})},200,{'Set-Cookie':cookie});
+  }catch(e){if(e instanceof CustomerInputError)return reply({error:e.message},400);console.error('customer_auth_unavailable');return reply({error:'Account service is temporarily unavailable. Please try again.'},503);}
 }

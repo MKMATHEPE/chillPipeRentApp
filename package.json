@@ -7,6 +7,8 @@
   },
   "scripts": {
     "dev": "vinext dev",
+    "dev:test-customers": "CP_LOCAL_TEST_CUSTOMERS=1 vinext dev --host 127.0.0.1 --port 3012",
+    "db:test-customers": "WRANGLER_WRITE_LOGS=false WRANGLER_LOG_PATH=.wrangler/logs wrangler d1 migrations apply DB --local --config local/wrangler.json --persist-to .wrangler/test-customers",
     "build": "vinext build",
     "start": "wrangler dev --config dist/server/wrangler.json",
     "lint": "oxlint",

@@ -4,10 +4,14 @@ import CustomerAuthShell from '@/components/customer-auth-shell';
 import { cacheCustomerProfile,customerNext,type CustomerAccountResponse } from '@/lib/customer-profile';
 export default function CustomerLogin(){
   const [signup,setSignup]=useState(false),[next,setNext]=useState('/my-bookings');
+  const [testMode,setTestMode]=useState<boolean|null>(null);
+  const [managedMode,setManagedMode]=useState(false);
+  useEffect(()=>{const controller=new AbortController();fetch('/api/customer/auth/mode',{signal:controller.signal,cache:'no-store'}).then(r=>r.json()).then(value=>{const mode=(value as {testMode:boolean;managedAccounts?:boolean});setTestMode(mode.testMode);setManagedMode(mode.managedAccounts===true);if(mode.testMode||mode.managedAccounts)setSignup(false);}).catch(()=>{});return()=>controller.abort();},[]);
   const [email,setEmail]=useState(''),[password,setPassword]=useState(''),[confirm,setConfirm]=useState(''),[name,setName]=useState(''),[phone,setPhone]=useState('');
   const [show,setShow]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState(''),[message,setMessage]=useState('');const lock=useRef(false);
   useEffect(()=>{
     const p=new URLSearchParams(location.search);setNext(customerNext(p.get('next')));setSignup(p.get('mode')==='signup');
+    if(p.get('passwordChanged')==='1')setMessage('Password saved. Sign in with your new password.');
     const fragment=new URLSearchParams(location.hash.slice(1));
     if(fragment.get('type')==='recovery'){location.replace('/customer-reset'+location.hash);return;}
     if(fragment.has('access_token'))setMessage('Your email link was opened. Sign in to continue.');
@@ -21,15 +25,17 @@ export default function CustomerLogin(){
     lock.current=true;setBusy(true);
     try{
       const r=await fetch('/api/customer/auth/'+action,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password,fullName:name,phone})});
-      const data=await r.json() as CustomerAccountResponse;if(!r.ok)throw new Error(data.error || 'Please try again.');
+      const data=await r.json() as CustomerAccountResponse & {requiresPasswordChange?:boolean};if(!r.ok)throw new Error(data.error || 'Please try again.');
       setPassword('');setConfirm('');
-      if(action==='login'){cacheCustomerProfile(data.profile);location.replace(next);return;}
+      if(action==='login'){if(data.profile)cacheCustomerProfile(data.profile);location.replace(data.requiresPasswordChange?(testMode?'/customer-test-password':'/customer-password')+'?next='+encodeURIComponent(next):next);return;}
       setMessage(data.message || 'Check your email, then sign in.');setSignup(false);
     }catch(e){setError(e instanceof Error?e.message:'Could not connect. Please try again.');setPassword('');setConfirm('');}
     finally{lock.current=false;setBusy(false);}
   }
   function submit(e:FormEvent){e.preventDefault();void send(signup?'signup':'login');}
   return <CustomerAuthShell title={signup?'Create account':'Welcome back'} subtitle={next==='/checkout'?'Sign in to finish your rental. Your session is saved.':'Your next session starts here.'}>
+    {testMode&&<p className="cp-login-note">Local test customers only. Use the fictional email and temporary password supplied by the administrator. No signup or reset emails are sent.</p>}
+    {managedMode&&<p className="cp-login-note">Use the account details supplied by The Chill Pipe. New customer or need help signing in? <a style={{color:'inherit',textDecoration:'underline'}} href="https://wa.me/27768505523">Contact us</a>.</p>}
     <form onSubmit={submit}>
       {signup&&<><label htmlFor="customer-name">Full name</label><input id="customer-name" autoComplete="name" required maxLength={100} value={name} onChange={e=>setName(e.target.value)} disabled={busy}/><label htmlFor="customer-phone">Contact number</label><input id="customer-phone" type="tel" autoComplete="tel" required maxLength={40} pattern="[+0-9 ()\-]{7,40}" value={phone} onChange={e=>setPhone(e.target.value)} disabled={busy}/></>}
       <label htmlFor="customer-email">Email address</label><input id="customer-email" type="email" autoComplete="username" required maxLength={254} value={email} onChange={e=>setEmail(e.target.value)} disabled={busy}/>
@@ -38,7 +44,7 @@ export default function CustomerLogin(){
       <button className="cp-login-submit" disabled={busy}>{busy?'Please wait…':signup?'Create account':'Sign in'}</button>
     </form>
     {error&&<p className="cp-login-error" role="alert">{error}</p>}{message&&<p className="cp-login-note" role="status">{message}</p>}
-    <button className="cp-login-back" style={{background:'none',border:0,padding:0,cursor:'pointer'}} disabled={busy} onClick={()=>{setSignup(!signup);setError('');setMessage('');setPassword('');setConfirm('');}}>{signup?'Already have an account? Sign in':'New here? Create an account'}</button>
-    {!signup&&<><br/><a className="cp-login-back" href="/customer-reset">Forgot password?</a><br/><button className="cp-login-back" style={{background:'none',border:0,padding:0,cursor:'pointer'}} disabled={busy || !email} onClick={()=>void send('resend')}>Resend confirmation email</button></>}
+    {testMode===false&&!managedMode&&<><button className="cp-login-back" style={{background:'none',border:0,padding:0,cursor:'pointer'}} disabled={busy} onClick={()=>{setSignup(!signup);setError('');setMessage('');setPassword('');setConfirm('');}}>{signup?'Already have an account? Sign in':'New here? Create an account'}</button>
+    {!signup&&<><br/><a className="cp-login-back" href="/customer-reset">Forgot password?</a><br/><button className="cp-login-back" style={{background:'none',border:0,padding:0,cursor:'pointer'}} disabled={busy || !email} onClick={()=>void send('resend')}>Resend confirmation email</button></>}</>}
   </CustomerAuthShell>;
 }

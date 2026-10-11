@@ -57,6 +57,13 @@ export const bookings=sqliteTable('bookings',{
 export const customerSessions=sqliteTable('customer_sessions',{
   tokenHash:text('token_hash').primaryKey(),userId:text('user_id').notNull(),
   accessToken:text('access_token').notNull(),expiresAt:integer('expires_at').notNull(),
+  managedRevision:integer('managed_revision').notNull().default(0),
+});
+export const managedCustomers=sqliteTable('managed_customers',{
+  userId:text('user_id').primaryKey(),email:text('email').notNull().unique(),
+  fullName:text('full_name').notNull(),phone:text('phone').notNull(),
+  status:text('status').notNull().default('active'),mustChange:integer('must_change').notNull().default(1),
+  revision:integer('revision').notNull().default(0),updatedAt:integer('updated_at').notNull(),
 });
 export const customerProfiles=sqliteTable('customer_profiles',{
   userId:text('user_id').primaryKey(),fullName:text('full_name').notNull(),phone:text('phone').notNull(),
