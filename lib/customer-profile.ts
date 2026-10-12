@@ -18,4 +18,4 @@ export function cacheCustomerProfile(profile:CustomerProfile){
 export function clearCustomerDevice(){
   try{['chill-pipe-profile','chill-pipe-booking-access','chill-pipe-order','chill-pipe-draft'].forEach(k=>localStorage.removeItem(k));sessionStorage.removeItem('chill-pipe-checkout-handoff');}catch{}
 }
-export function customerNext(value:string|null){return value==='/checkout'?'/checkout':'/my-bookings';}
+export function customerNext(value:string|null){return value==='/checkout'?'/checkout':'/';}

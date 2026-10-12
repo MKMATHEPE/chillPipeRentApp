@@ -25,7 +25,9 @@ clearCustomerDevice();assert.equal(localStorage.getItem('chill-pipe-profile'),nu
 assert.equal(localStorage.getItem('unrelated-setting'),'keep');assert.equal(sessionStorage.getItem('admin-state'),'keep');
 console.log('PASS account switching and logout clear customer data without clearing unrelated/admin state');
 assert.equal(customerNext('/checkout'),'/checkout');
-for(const value of [null,'https://evil.invalid','//evil.invalid','/admin-preview','/checkout?next=evil'])assert.equal(customerNext(value),'/my-bookings');
+for(const value of [null,'','/','/my-bookings','https://evil.invalid','//evil.invalid','/admin-preview','/checkout?next=evil'])assert.equal(customerNext(value),'/');
+// Password-change round trips encode and re-read the same safe destination.
+for(const value of [null,'/checkout']){const next=customerNext(value);assert.equal(customerNext(new URLSearchParams('next='+encodeURIComponent(next)).get('next')),next);}
 globalThis.localStorage={getItem(){throw new Error('Storage disabled');},removeItem(){throw new Error('Storage disabled');}};
 assert.doesNotThrow(()=>cacheCustomerProfile(alice));assert.doesNotThrow(()=>clearCustomerDevice());
 console.log('PASS redirect allowlist and disabled-storage resilience');

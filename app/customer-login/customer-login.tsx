@@ -3,7 +3,7 @@ import { useEffect,useRef,useState,type FormEvent } from 'react';
 import CustomerAuthShell from '@/components/customer-auth-shell';
 import { cacheCustomerProfile,customerNext,type CustomerAccountResponse } from '@/lib/customer-profile';
 export default function CustomerLogin(){
-  const [signup,setSignup]=useState(false),[next,setNext]=useState('/my-bookings');
+  const [signup,setSignup]=useState(false),[next,setNext]=useState('/');
   const [testMode,setTestMode]=useState<boolean|null>(null);
   const [managedMode,setManagedMode]=useState(false);
   useEffect(()=>{const controller=new AbortController();fetch('/api/customer/auth/mode',{signal:controller.signal,cache:'no-store'}).then(r=>r.json()).then(value=>{const mode=(value as {testMode:boolean;managedAccounts?:boolean});setTestMode(mode.testMode);setManagedMode(mode.managedAccounts===true);if(mode.testMode||mode.managedAccounts)setSignup(false);}).catch(()=>{});return()=>controller.abort();},[]);
