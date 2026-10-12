@@ -1,0 +1,31 @@
+// Isolated production-route tests. No live users, bookings or network writes.
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { DatabaseSync } from 'node:sqlite';
+import ts from 'typescript';
+const sql = new DatabaseSync(':memory:');
+sql.exec('CREATE TABLE bookings(reference TEXT PRIMARY KEY, customer_user_id TEXT, status TEXT, completed_at INTEGER, order_json TEXT)');
+const insert = sql.prepare('INSERT INTO bookings VALUES(?,?,?,?,?)');
+insert.run('CP-ONE','one','complete',1,JSON.stringify({quantities:{pipe:2},rentalTotal:1300}));
+insert.run('CP-TWO','two','complete',2,'{}');
+insert.run('CP-PENDING','one','approved',3,'{}');
+let user='one', outage=false;
+const db={prepare(query){if(outage)throw Error('outage');const stmt=sql.prepare(query);let args=[];const p={bind(...a){args=a;return p;},async first(){return stmt.get(...args)||null;},async all(){return {results:stmt.all(...args)};}};return p;}};
+function load(file, deps={}){const module={exports:{}};const source=ts.transpileModule(readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;new Function('require','module','exports',source)(name=>{for(const [suffix,value]of Object.entries(deps))if(name.endsWith(suffix))return value;throw Error(name);},module,module.exports);return module.exports;}
+const reviews=load('lib/booking-reviews.ts');
+const route=load('app/api/customer/reviews/route.ts',{'/db':{getDb:()=>db},'/customer-auth':{AUTH_HEADERS:{'Cache-Control':'no-store'},verifyCustomer:async()=>user?{id:user}:null},'/admin-auth':{sameOrigin:r=>r.headers.get('origin')==='https://app.example'},'/booking-reviews':reviews});
+const req=(body,origin='https://app.example')=>new Request('https://app.example/api/customer/reviews',{method:body?'POST':'GET',headers:{origin},...(body?{body:JSON.stringify(body)}:{})});
+const payload={reference:'CP-ONE',rating:1,tags:['Long wait'],comment:'Could improve.'};
+assert.deepEqual((await (await route.GET(req())).json()).bookings,[{reference:'CP-ONE'}]);
+assert.equal((await route.POST(req({...payload,reference:'CP-TWO'}))).status,409);
+assert.equal((await route.POST(req({...payload,reference:'CP-PENDING'}))).status,409);
+assert.equal((await route.POST(req(payload,'https://evil.example'))).status,403);
+for(const patch of [{rating:0},{rating:6},{rating:1.5},{tags:['Excellent service']},{tags:['Long wait','Long wait']},{comment:'x'.repeat(1001)}])assert.equal((await route.POST(req({...payload,...patch}))).status,400);
+user=null;assert.equal((await route.GET(req())).status,401);assert.equal((await route.POST(req(payload))).status,401);user='one';
+const results=await Promise.all([route.POST(req(payload)),route.POST(req(payload))]);assert.deepEqual(results.map(r=>r.status).sort(),[200,409]);
+const saved=JSON.parse(sql.prepare('SELECT order_json FROM bookings WHERE reference=?').get('CP-ONE').order_json);
+assert.equal(saved.review.rating,1);assert.deepEqual(saved.review.tags,['Long wait']);assert.equal(saved.quantities.pipe,2);assert.equal(saved.rentalTotal,1300);
+assert.deepEqual((await (await route.GET(req())).json()).bookings,[]);
+for(let rating=1;rating<=5;rating++)assert.equal(reviews.validReview({rating,tags:reviews.quickReviews[rating],comment:''}),true);
+outage=true;assert.equal((await route.GET(req())).status,503);assert.equal((await route.POST(req(payload))).status,503);
+console.log('PASS completion/ownership/auth/origin checks, star-specific tags, invalid input, atomic duplicate prevention, persisted review, unchanged order data, hide submitted reviews, outage handling');

@@ -1,7 +1,9 @@
 import { paymentLabel } from './payment-methods';
+import type { BookingReview } from './booking-reviews';
 
 export type Status = 'Pending' | 'Approved' | 'Handover' | 'Returned' | 'Completed' | 'Declined' | 'Cancelled' | 'Expired';
 export type AdminBooking = {
+  review?: BookingReview;
   id: string; version: number; rawStatus: string; customerId: string; name: string; phone: string;
   rentalStart: string; date: string; mode: string; address: string; payment: string; paid: boolean;
   paidAt?: number; handedOverAt?: number; completedAt?: number; closedAt?: number; status: Status;
@@ -36,6 +38,7 @@ export function toAdminBooking(row: Record<string, any>): AdminBooking {
   const rentalStart = validDate ? new Intl.DateTimeFormat('sv-SE', { timeZone: 'Africa/Johannesburg', dateStyle: 'short', timeStyle: 'short' }).format(date).replace(' ', 'T') : start;
   const history = list(parse(row.activity_json, [])).map((entry: any) => `${entry.label} · ${new Date(entry.at).toLocaleString('en-ZA', { timeZone: 'Africa/Johannesburg', dateStyle: 'medium', timeStyle: 'short' })}`);
   return {
+    review: order.review,
     id: row.reference, version: Number(row.version), rawStatus: row.status,
     customerId: String(row.phone).replace(/\D/g, '').replace(/^0/, '27'),
     name: row.customer_name, phone: row.phone, rentalStart,

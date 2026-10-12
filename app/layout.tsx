@@ -9,6 +9,7 @@ import './operations.css';
 import './app-shell.css';
 import './cinematic.css';
 import {testCustomersEnabled} from '../lib/test-customers';
+import { BookingReviewPrompt } from '../components/booking-review';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -45,6 +46,7 @@ export default function RootLayout({
       >
         {testCustomersEnabled&&<aside style={{position:'relative',zIndex:200,background:'#fff0bd',color:'#111',textAlign:'center',padding:'8px 12px',font:'12px/1.4 Arial,sans-serif'}}>LOCAL TEST ONLY · Fictional customers and bookings · Do not make real payments</aside>}
         {children}
+        <BookingReviewPrompt />
       </body>
     </html>
   );
