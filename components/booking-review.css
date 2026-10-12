@@ -2,3 +2,33 @@
 body:has(.cp-review) [data-slot=dialog-overlay]{position:fixed;inset:0;z-index:300;background:#0008}
 .cp-review h2{font:32px/1.1 Georgia,serif;margin:12px 0}.cp-review h3{font:22px Georgia,serif;margin:14px 0 4px}.cp-review p{color:#6b6b6b}.cp-review fieldset{border:0;padding:0;margin:0;min-width:0}.cp-review-label{font-size:12px;margin-top:12px}.cp-review-handle{height:4px;width:36px;margin:auto;border-radius:3px;background:#ddd}.cp-review-stars{display:flex;justify-content:center;gap:8px;margin-top:8px}.cp-review-stars button{background:none;border:0;color:#111;padding:6px;min-height:44px;min-width:44px}.cp-review-stars svg{width:32px;height:32px}.cp-review-rating{text-align:center;margin:2px 0}.cp-review-hint{font-size:12px;margin:0 0 8px}.cp-review-tags{display:grid;grid-template-columns:1fr 1fr;gap:8px}.cp-review-tags button{border:1px solid #ccc;border-radius:16px;padding:9px 8px;background:transparent;color:#111;min-height:44px;font-size:13px}.cp-review-tags button[aria-pressed=true]{background:#111;color:white;border-color:#111}.cp-review-more,.cp-review-later{border:0;background:none;color:#666;min-height:44px;font-size:13px}.cp-review-comment{display:block;margin:8px 0 16px}.cp-review-comment small{color:#777}.cp-review textarea{display:block;box-sizing:border-box;width:100%;margin-top:6px;border:1px solid #ccc;border-radius:12px;padding:10px;background:white;color:#111;font:16px Arial,sans-serif;resize:vertical}.cp-review-submit{width:100%;border:0;border-radius:24px;background:#111;color:white;padding:13px;font-size:16px;min-height:46px}.cp-review-submit:disabled{opacity:.45}.cp-review-later{display:block;margin:auto}.cp-review button{cursor:pointer}.cp-review button:focus-visible,.cp-review textarea:focus-visible{outline:2px solid #777;outline-offset:3px}.cp-review .cp-review-error{color:#a21b1b}
 @media(max-width:600px){.cp-review[data-slot=dialog-content]{top:auto;bottom:0;left:0;transform:none;width:100%;max-width:none;border-radius:24px 24px 0 0;padding:20px 20px max(16px,env(safe-area-inset-bottom));max-height:90dvh}}
+
+/* Use the dialog's transition lifecycle so closing stays mounted until settled. */
+.cp-review[data-slot=dialog-content]{
+  animation:none;
+  opacity:1;
+  transition:opacity 240ms ease,transform 320ms cubic-bezier(.22,1,.36,1);
+}
+.cp-review[data-slot=dialog-content][data-starting-style],
+.cp-review[data-slot=dialog-content][data-ending-style]{
+  opacity:0;
+  transform:translate(-50%,calc(-50% + 18px));
+}
+.cp-review[data-slot=dialog-content][data-ending-style]{transition-duration:180ms}
+body:has(.cp-review) [data-slot=dialog-overlay]{animation:none;opacity:1;transition:opacity 240ms ease}
+body:has(.cp-review) [data-slot=dialog-overlay][data-starting-style],
+body:has(.cp-review) [data-slot=dialog-overlay][data-ending-style]{opacity:0}
+.cp-review-stars svg{transition:fill 180ms ease,transform 180ms ease}
+.cp-review-stars button[aria-pressed=true] svg{transform:scale(1.08)}
+.cp-review-tags button{transition:background-color 180ms ease,color 180ms ease,border-color 180ms ease;animation:cp-review-choice-in 220ms ease both}
+.cp-review-submit{transition:opacity 180ms ease,background-color 180ms ease}
+@keyframes cp-review-choice-in{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:600px){
+  .cp-review[data-slot=dialog-content][data-starting-style],
+  .cp-review[data-slot=dialog-content][data-ending-style]{transform:translateY(32px)}
+}
+@media(prefers-reduced-motion:reduce){
+  .cp-review[data-slot=dialog-content],
+  body:has(.cp-review) [data-slot=dialog-overlay],
+  .cp-review-stars svg,.cp-review-tags button,.cp-review-submit{transition:none;animation:none}
+}
