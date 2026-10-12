@@ -33,9 +33,8 @@ export default function CustomerLogin(){
     finally{lock.current=false;setBusy(false);}
   }
   function submit(e:FormEvent){e.preventDefault();void send(signup?'signup':'login');}
-  return <CustomerAuthShell title={signup?'Create account':'Welcome back'} subtitle={next==='/checkout'?'Sign in to finish your rental. Your session is saved.':'Your next session starts here.'}>
+  return <CustomerAuthShell showFooter={false} title={signup?'Create account':'Welcome back'} subtitle={next==='/checkout'?'Sign in to finish your rental. Your session is saved.':'Your next session starts here.'}>
     {testMode&&<p className="cp-login-note">Local test customers only. Use the fictional email and temporary password supplied by the administrator. No signup or reset emails are sent.</p>}
-    {managedMode&&<p className="cp-login-note">Use the account details supplied by The Chill Pipe. New customer or need help signing in? <a style={{color:'inherit',textDecoration:'underline'}} href="https://wa.me/27768505523">Contact us</a>.</p>}
     <form onSubmit={submit}>
       {signup&&<><label htmlFor="customer-name">Full name</label><input id="customer-name" autoComplete="name" required maxLength={100} value={name} onChange={e=>setName(e.target.value)} disabled={busy}/><label htmlFor="customer-phone">Contact number</label><input id="customer-phone" type="tel" autoComplete="tel" required maxLength={40} pattern="[+0-9 ()\-]{7,40}" value={phone} onChange={e=>setPhone(e.target.value)} disabled={busy}/></>}
       <label htmlFor="customer-email">Email address</label><input id="customer-email" type="email" autoComplete="username" required maxLength={254} value={email} onChange={e=>setEmail(e.target.value)} disabled={busy}/>
