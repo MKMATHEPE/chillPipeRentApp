@@ -2,6 +2,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowRight,
+  CalendarDays,
+  ChevronDown,
   Check,
   Clock3,
   Flame,
@@ -1027,7 +1029,7 @@ export default function BookingFlow() {
             </button>
             {showDeliveryDetails && (
               <section className="delivery-details-panel address-panel">
-                <label className="booking-row delivery-address-row">
+                <label className="booking-row delivery-address-row delivery-field">
                   <MapPin />
                   <span>
                     Street address
@@ -1090,6 +1092,7 @@ export default function BookingFlow() {
                     <input
                       required
                       ref={suburbInputRef}
+                      className="delivery-suburb-input"
                       autoComplete="address-level2"
                       aria-invalid={invalidFields.includes('suburb')}
                       value={suburb}
@@ -1158,12 +1161,15 @@ export default function BookingFlow() {
                 </button>
               </section>
             )}
-            <div className="collection-schedule">
+            <div className="collection-schedule delivery-schedule">
               <label className="booking-row">
-                <Clock3 />
+                <CalendarDays />
                 <span>
                   Delivery date
+                  <span className={`delivery-date-control${collectionDay ? '' : ' is-empty'}`}>
+                  {!collectionDay && <span className="delivery-date-placeholder" aria-hidden="true">Select a date</span>}
                   <input
+                    aria-label="Delivery date"
                     required
                     ref={dateInputRef}
                     aria-invalid={invalidFields.includes('date')}
@@ -1176,13 +1182,16 @@ export default function BookingFlow() {
                       setValidationMessage('');
                     }}
                   />
+                  </span>
                 </span>
               </label>
               <label className="booking-row">
                 <Clock3 />
                 <span>
                   Delivery time
+                  <span className="delivery-time-control">
                   <select
+                    aria-label="Delivery time"
                     required
                     ref={timeInputRef}
                     aria-invalid={invalidFields.includes('date')}
@@ -1210,6 +1219,8 @@ export default function BookingFlow() {
                       );
                     })}
                   </select>
+                  <ChevronDown aria-hidden="true" />
+                  </span>
                 </span>
               </label>
             </div>
