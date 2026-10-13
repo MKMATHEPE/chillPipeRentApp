@@ -69,3 +69,43 @@ sql.exec('DELETE FROM admin_login_limits');
 for(let i=0;i<10;i++)await auth.POST(request('login',{}));
 assert.equal((await auth.POST(request('login',{}))).status,429);
 console.log('PASS outage recovery, logout, expiry, password-reset ownership/replay, admin reset separation and rate limits');
+
+// Renewable sessions use only isolated data and a fake provider.
+const renewalUser={id:'renewal',email:'renewal@example.invalid',email_confirmed_at:'yes',user_metadata:{}};
+let refreshCalls=0,refreshFailure=null,duringRefresh=async()=>{};
+fake.auth.refreshSession=async()=>{
+  refreshCalls++;
+  await duringRefresh();
+  if(refreshFailure)return {data:{},error:refreshFailure};
+  identities.set('renewed',renewalUser);
+  return {data:{user:renewalUser,session:{access_token:'renewed',refresh_token:'rotated',expires_at:Math.floor(Date.now()/1000)+3600}},error:null};
+};
+async function newRenewal(){
+  const value=await modules.customer.startCustomer(request('login'),renewalUser,{access_token:'old',refresh_token:'refresh-original',expires_at:Math.floor(Date.now()/1000)+30});
+  assert.match(value,/Max-Age=86[34]\d\d/);
+  assert.ok(!value.includes('refresh-original'));
+  return value.split(';')[0];
+}
+let renewable=await newRenewal();
+const deadline=sql.prepare('SELECT expires_at FROM customer_sessions WHERE user_id=?').get('renewal').expires_at;
+const concurrent=await Promise.all([modules.customer.verifyCustomer(renewable),modules.customer.verifyCustomer(renewable)]);
+assert.ok(concurrent.every(u=>u?.id==='renewal'));assert.equal(refreshCalls,1);
+assert.equal(sql.prepare('SELECT expires_at FROM customer_sessions WHERE user_id=?').get('renewal').expires_at,deadline);
+assert.equal(sql.prepare('SELECT refresh_token FROM customer_sessions WHERE user_id=?').get('renewal').refresh_token,'rotated');
+console.log('PASS transparent renewal, rotated token storage, simultaneous requests and fixed 24-hour cap');
+sql.exec("UPDATE customer_sessions SET access_expires_at=0 WHERE user_id='renewal'");
+refreshFailure={status:503};
+assert.equal((await auth.GET(request('session',{},renewable,'GET'))).status,503);
+assert.ok(sql.prepare('SELECT 1 FROM customer_sessions WHERE user_id=?').get('renewal'));
+refreshFailure=null;assert.equal((await modules.customer.verifyCustomer(renewable)).id,'renewal');
+sql.exec("UPDATE customer_sessions SET access_expires_at=0 WHERE user_id='renewal'");
+refreshFailure={status:400,code:'refresh_token_not_found'};
+assert.equal(await modules.customer.verifyCustomer(renewable),null);
+refreshFailure=null;
+renewable=await newRenewal();duringRefresh=()=>modules.customer.revokeCustomer(renewable);
+assert.equal(await modules.customer.verifyCustomer(renewable),null);
+assert.equal(sql.prepare('SELECT COUNT(*) n FROM customer_sessions WHERE user_id=?').get('renewal').n,0);
+duringRefresh=async()=>{};
+renewable=await newRenewal();sql.exec("UPDATE customer_sessions SET expires_at=0 WHERE user_id='renewal'");
+const before=refreshCalls;assert.equal(await modules.customer.verifyCustomer(renewable),null);assert.equal(refreshCalls,before);
+console.log('PASS provider outage retains session, invalid refresh rejected, logout during renewal cannot resurrect session, hard expiry enforced');

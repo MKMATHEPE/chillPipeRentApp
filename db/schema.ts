@@ -58,6 +58,10 @@ export const customerSessions=sqliteTable('customer_sessions',{
   tokenHash:text('token_hash').primaryKey(),userId:text('user_id').notNull(),
   accessToken:text('access_token').notNull(),expiresAt:integer('expires_at').notNull(),
   managedRevision:integer('managed_revision').notNull().default(0),
+  refreshToken:text('refresh_token'),
+  accessExpiresAt:integer('access_expires_at').notNull().default(0),
+  refreshOwner:text('refresh_owner'),
+  refreshUntil:integer('refresh_until').notNull().default(0),
 });
 export const managedCustomers=sqliteTable('managed_customers',{
   userId:text('user_id').primaryKey(),email:text('email').notNull().unique(),
