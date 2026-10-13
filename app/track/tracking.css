@@ -162,11 +162,23 @@
 .booking-progress h2 { font:400 24px Georgia,serif; margin:0 0 18px; }
 .booking-progress ol { list-style:none; display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); padding:0; margin:0; }
 .booking-progress li { position:relative; display:flex; flex-direction:column; align-items:center; gap:10px; text-align:center; font-size:12px; color:#777; overflow-wrap:anywhere; }
-.booking-progress li:not(:last-child)::after { content:''; position:absolute; top:14px; left:50%; width:100%; height:2px; background:#ccc; }
-.booking-progress li.done:not([aria-current]):after { background:#111; }
+.booking-progress li:not(:last-child)::after { content:''; position:absolute; top:14px; left:50%; width:100%; height:2px; background:linear-gradient(#111,#111) left center / 0% 100% no-repeat #ccc; transition:background-size 420ms cubic-bezier(.22,1,.36,1); }
+.booking-progress li.done:not([aria-current]):after { background-size:100% 100%; }
 .progress-dot { position:relative; z-index:1; display:grid; place-items:center; width:30px; height:30px; border:2px solid #bbb; border-radius:50%; background:#f5f4f0; box-sizing:border-box; }
 .booking-progress li.done { color:#111; }
 .booking-progress li.done .progress-dot { border-color:#111; background:#111; color:white; }
+.booking-progress li { transition:color 240ms ease; }
+.booking-progress .progress-dot { transition:background-color 280ms ease,border-color 280ms ease,color 280ms ease; }
+.booking-progress .progress-dot svg { animation:booking-check-in 240ms ease-out; }
+@keyframes booking-check-in {
+  from { opacity:0; transform:scale(.8); }
+  to { opacity:1; transform:scale(1); }
+}
+@media(prefers-reduced-motion:reduce) {
+  .booking-progress li,.booking-progress .progress-dot,
+  .booking-progress li:not(:last-child)::after { transition:none; }
+  .booking-progress .progress-dot svg { animation:none; }
+}
 .booking-details { border:1px solid #ccc; border-radius:16px; overflow:hidden; }
 .booking-details summary { cursor:pointer; display:flex; align-items:center; gap:12px; padding:18px 16px; min-height:48px; font-size:16px; }
 .booking-details summary::-webkit-details-marker { display:none; }
