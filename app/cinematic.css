@@ -372,6 +372,30 @@
 .flow-primary svg {
   width: 17px;
 }
+/* Step two: customer action feedback, without changing click or loading logic. */
+:is(.flow-primary,.checkout-flow-submit,.delivery-details-done,.delivery-quote-button) {
+  transition: transform 140ms ease-out, box-shadow 180ms ease, opacity 180ms ease;
+}
+:is(.flow-primary,.checkout-flow-submit,.delivery-details-done,.delivery-quote-button):active:not(:disabled) {
+  transform: scale(.985);
+}
+:is(.flow-primary,.checkout-flow-submit,.delivery-details-done,.delivery-quote-button):focus-visible {
+  outline: 2px solid #777;
+  outline-offset: 4px;
+}
+:is(.flow-primary,.checkout-flow-submit,.delivery-details-done,.delivery-quote-button):disabled {
+  cursor: not-allowed;
+}
+.checkout-flow-submit:disabled:not(.disabled) { opacity: .65; }
+@media (hover:hover) and (pointer:fine) {
+  :is(.flow-primary,.checkout-flow-submit,.delivery-details-done,.delivery-quote-button):hover:not(:disabled) {
+    box-shadow: 0 4px 12px #00000018;
+  }
+}
+@media (prefers-reduced-motion:reduce) {
+  :is(.flow-primary,.checkout-flow-submit,.delivery-details-done,.delivery-quote-button) { transition:none; }
+  :is(.flow-primary,.checkout-flow-submit,.delivery-details-done,.delivery-quote-button):active:not(:disabled) { transform:none; }
+}
 .flow-nav {
   position: fixed;
   z-index: 20;
