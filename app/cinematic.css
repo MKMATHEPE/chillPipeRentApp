@@ -173,6 +173,44 @@
   width: 60%;
   opacity: 0.8;
 }
+/* Step one: feedback only on hookah selection; other screens stay unchanged. */
+.product-carousel .flow-product {
+  transition: box-shadow 220ms ease;
+}
+.product-carousel .flow-product.selected {
+  box-shadow: 0 8px 24px #00000010, inset 0 0 0 1px #1113;
+}
+.product-carousel .flow-product:has(.flow-quantity button:active:not(:disabled)) {
+  box-shadow: 0 10px 26px #0000001c, inset 0 0 0 1px #1115;
+}
+.product-carousel .flow-quantity button {
+  border-radius: 50%;
+  transition: background-color 160ms ease;
+}
+.product-carousel .flow-quantity button svg {
+  transition: transform 160ms ease;
+}
+.product-carousel .flow-quantity button:active:not(:disabled) {
+  background-color: #ffffff24;
+}
+.product-carousel .flow-quantity button:active:not(:disabled) svg {
+  transform: scale(.88);
+}
+.product-carousel .quantity-value {
+  font-variant-numeric: tabular-nums;
+  animation: hookah-quantity-change 200ms ease-out;
+}
+@keyframes hookah-quantity-change {
+  from { opacity: .55; transform: translateY(3px) scale(.92); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .product-carousel .flow-product,
+  .product-carousel .flow-quantity button,
+  .product-carousel .flow-quantity button svg { transition: none; }
+  .product-carousel .quantity-value { animation: none; }
+  .product-carousel .flow-quantity button:active:not(:disabled) svg { transform: none; }
+}
 .product-photo {
   height: 168px;
   border-radius: 15px;

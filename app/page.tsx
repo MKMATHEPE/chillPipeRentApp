@@ -174,7 +174,7 @@ function Quantity({
       >
         <Minus />
       </button>
-      <span>{value}</span>
+      <span key={value} className="quantity-value" aria-live="polite" aria-atomic="true">{value}</span>
       <button
         aria-label="Increase quantity"
         disabled={value >= 10}
@@ -687,7 +687,7 @@ export default function BookingFlow() {
           </div>
           {priceError && <p role="alert">{priceError} <button onClick={() => void refreshPrices()}>Retry</button></p>}
           <div className="product-carousel">
-            <article className="flow-product selected">
+            <article className={pipeQty > 0 ? 'flow-product selected' : 'flow-product'}>
               <div className="product-photo">
                 <img src="/classic-hookah.webp" alt="Classic hookah" />
               </div>
