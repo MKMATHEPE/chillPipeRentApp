@@ -1157,6 +1157,15 @@
   width: calc(min(100%, 520px) - 40px);
   box-shadow: 0 8px 28px #0005;
 }
+/* Retain fixed-button centring when the shared press effect is active. */
+.flavours-sheet > .flow-primary:active:not(:disabled) {
+  transform: translateX(-50%) scale(.985);
+}
+@media (prefers-reduced-motion: reduce) {
+  .flavours-sheet > .flow-primary:active:not(:disabled) {
+    transform: translateX(-50%);
+  }
+}
 @media (min-width: 900px) {
   .flavours-sheet > .flow-primary {
     bottom: 108px;
