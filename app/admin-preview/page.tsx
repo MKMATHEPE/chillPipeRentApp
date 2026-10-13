@@ -13,6 +13,7 @@ import BookingCalendar, { localDate } from './booking-calendar';
 import './preview.css';
 import './client-style.css';
 import './performance.css';
+import './motion.css';
 
 const reference = (id: string) => id;
 const money = (n: number) => `R${n.toLocaleString('en-ZA')}`;
@@ -150,6 +151,7 @@ export default function AdminPreview() {
       </aside>}
       <div className="cp-panel-handle" aria-hidden="true" />
       <nav className="cp-admin-tabs" aria-label="Admin sections">{(['Requests', 'Bookings', 'Inventory', 'Performance'] as const).map(t => <button key={t} aria-current={tab === t ? 'page' : undefined} onClick={() => changeTab(t)}>{t === 'Requests' ? <Inbox size={19} /> : t === 'Inventory' ? <Package size={19} /> : t === 'Performance' ? <ChartNoAxesColumnIncreasing size={19} /> : <ClipboardList size={19} />}{t}{t === 'Requests' && <span>{requests.length}</span>}</button>)}</nav>
+      <div className="cp-admin-tab-content" key={tab}>
       {!mobileDetails && <div className="cp-admin-heading"><div><h1>{tab === 'Requests' ? 'Booking requests' : tab === 'Inventory' ? 'Equipment inventory' : tab === 'Performance' ? 'Performance' : 'Your bookings'}</h1></div>{tab !== 'Performance' && tab !== 'Requests' && <span>{tab === 'Inventory' ? '4 equipment types' : `${visible.length} bookings`}</span>}</div>}
       <p className="cp-admin-notice" role="status">{loading ? 'Loading bookings…' : requestSummary ? `${requests.length} awaiting review${notice ? ` · ${notice}` : ''}` : notice}</p>
       {loadError && <p className="cp-stock-error" role="alert">{loadError} <button onClick={() => void refresh()}>Retry</button></p>}
@@ -183,6 +185,7 @@ export default function AdminPreview() {
           <details className="cp-history"><summary>Activity · {booking.history.length} updates</summary>{booking.history.map((h, i) => <p key={i}>{h}</p>)}</details>
         </article>}
       </div>}
+      </div>
     </div>
     <Dialog open={!!action} onOpenChange={open => { if (!open && !saving) { setAction(null); setReason(''); setActionError(''); } }}><DialogContent className="cp-confirm"><DialogTitle>{action === 'Paid' ? 'Record payment?' : `${action === 'Approved' ? 'Approve this booking' : action === 'Declined' ? 'Decline this booking' : `Mark as ${action?.toLowerCase()}`}?`}</DialogTitle><DialogDescription>{actionTarget.current?.id} · {action === 'Declined' ? 'Give a clear reason for the customer.' : action === 'Handover' ? 'Confirm the customer has received the equipment.' : action === 'Returned' ? 'Confirm the equipment has been received back.' : action === 'Completed' ? 'Confirm you have inspected the equipment and can close this booking.' : action === 'Paid' ? 'Only record payment after you have verified receipt.' : 'Confirm the equipment and requested rental slot are available.'}</DialogDescription>{action === 'Declined' && <label>Reason for declining<textarea maxLength={500} value={reason} onChange={e => setReason(e.target.value)} placeholder="Explain why this request cannot be accepted" /></label>}{actionError && <p role="alert" className="cp-stock-error">{actionError}</p>}<div className="cp-actions"><button className="cp-secondary" disabled={saving} onClick={() => { setAction(null); setActionError(''); }}>Cancel</button><button className="cp-primary" disabled={saving || (action === 'Declined' && !reason.trim())} onClick={() => void confirm()}>{saving ? 'Saving…' : 'Confirm'}</button></div></DialogContent></Dialog>
   </main>;

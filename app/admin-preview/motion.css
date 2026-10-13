@@ -1,0 +1,30 @@
+/* Fade only: transforms on a panel would change its fixed descendants' positioning. */
+@keyframes cp-admin-tab-enter {
+  from { opacity: .35; }
+  to { opacity: 1; }
+}
+.cp-admin-tab-content {
+  animation: cp-admin-tab-enter 180ms ease-out;
+}
+.cp-admin button,
+.cp-confirm button {
+  transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
+}
+.cp-admin button:focus-visible,
+.cp-confirm button:focus-visible {
+  outline: 2px solid #8b7350;
+  outline-offset: 3px;
+}
+.cp-admin button:active:not(:disabled),
+.cp-confirm button:active:not(:disabled) {
+  box-shadow: inset 0 0 0 100vmax #80808024;
+}
+@media (hover: hover) and (pointer: fine) {
+  .cp-admin .cp-booking-row:hover { background-color: #f3f1ec; }
+  .cp-admin-tabs button:hover { background-color: #f3f1ec; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cp-admin-tab-content { animation: none; }
+  .cp-admin button,
+  .cp-confirm button { transition: none; }
+}
