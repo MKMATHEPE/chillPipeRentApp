@@ -24,7 +24,14 @@ export function performanceReport(input: ReportBooking[],from: string,to: string
   const unique = new Map<string,ReportBooking>();
   input.forEach(b => { if (!unique.has(b.id) || b.version >= unique.get(b.id)!.version) unique.set(b.id,b); });
   const bookings = [...unique.values()];
-  const inside = (time?: number) => valid && validTime(time) && reportDay(time) >= from && reportDay(time) <= to;
+  // Reuse timezone conversions within this report only; never cache customer data across requests.
+  const dates = new Map<number,string>();
+  const dateOf = (time:number) => {
+    let date=dates.get(time);
+    if(date===undefined){date=reportDay(time);dates.set(time,date);}
+    return date;
+  };
+  const inside = (time?: number) => valid && validTime(time) && dateOf(time) >= from && dateOf(time) <= to;
   const paid = bookings.filter(b => b.paid && inside(b.paidAt));
   const completed = bookings.filter(b => b.status === 'Completed' && inside(b.completedAt));
   const expired = bookings.filter(b => b.status === 'Expired' && inside(b.closedAt));
@@ -36,12 +43,18 @@ export function performanceReport(input: ReportBooking[],from: string,to: string
   const handedOver = bookings.filter(b => inside(b.handedOverAt));
   const quantities = {Classic:0,Premium:0};
   completed.forEach(b => { quantities.Classic += units(b.quantities.pipe); quantities.Premium += units(b.quantities.premium); });
-  const returning = new Set(completed.filter(b => b.customerId && bookings.some(old => old.id !== b.id && old.customerId === b.customerId && old.status === 'Completed' && validTime(old.completedAt) && old.completedAt < b.completedAt!)).map(b => b.customerId)).size;
+  const firstCompletion = new Map<string,number>();
+  for(const b of bookings) {
+    if(b.customerId && b.status==='Completed' && validTime(b.completedAt)) {
+      firstCompletion.set(b.customerId,Math.min(firstCompletion.get(b.customerId) ?? Infinity,b.completedAt));
+    }
+  }
+  const returning = new Set(completed.filter(b => b.customerId && firstCompletion.get(b.customerId)! < b.completedAt!).map(b => b.customerId)).size;
   const days = valid ? Math.round((Date.parse(to)-Date.parse(from))/86400000)+1 : 0;
   const group = Math.max(1,Math.ceil(days/7));
   const bars = Array.from({length:Math.ceil(days/group)},(_,i) => {
     const first=shiftDay(from,i*group),last=shiftDay(from,Math.min(days-1,(i+1)*group-1));
-    const within=(time:number) => reportDay(time) >= first && reportDay(time) <= last;
+    const within=(time:number) => dateOf(time) >= first && dateOf(time) <= last;
     return {first,last,money:paid.filter(b => within(b.paidAt!)).reduce((sum,b) => sum+cents(b),0)/100,rentals:completed.filter(b => within(b.completedAt!)).length};
   });
   const undated = bookings.filter(b => (b.paid && !validTime(b.paidAt)) || (b.status === 'Completed' && !validTime(b.completedAt)) || (['Declined','Cancelled','Expired'].includes(b.status) && !validTime(b.closedAt)) || (['Handover','Returned','Completed'].includes(b.status) && !validTime(b.handedOverAt))).length;

@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
 import ts from 'typescript';
+// Fixed clock for dated fixtures; expiry scenarios below explicitly advance it.
+Date.now = () => Date.parse('2026-10-13T08:00:00Z');
 const sql = new DatabaseSync(':memory:');
 for (const file of readdirSync('drizzle').filter(f => f.endsWith('.sql')).sort()) sql.exec(readFileSync('drizzle/' + file, 'utf8'));
 let unavailable = false;

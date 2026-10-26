@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Wallet, Users, Tag, Package, Info } from 'lucide-react';
 import { performanceReport, earliestReportDay, reportDay as day, shiftDay as shift, type ReportBooking } from '@/lib/performance';
 
@@ -14,9 +14,10 @@ export default function Performance({ bookings }: { bookings: ReportBooking[] })
   const [end, setEnd] = useState(today);
   const [picked, setPicked] = useState<number | null>(null);
   const weekday = new Date(`${today}T12:00:00Z`).getUTCDay();
-  const from = period === 'Custom' ? start : period === 'All time' ? earliestReportDay(bookings,today) : period === 'Month' ? today.slice(0, 8) + '01' : shift(today, -(weekday + 6) % 7);
+  const firstDay = useMemo(() => period === 'All time' ? earliestReportDay(bookings,today) : today,[bookings,period,today]);
+  const from = period === 'Custom' ? start : period === 'All time' ? firstDay : period === 'Month' ? today.slice(0, 8) + '01' : shift(today, -(weekday + 6) % 7);
   const to = period === 'Custom' ? end : today;
-  const {valid,completed,statusValues,closedBookingValue,handedOver,received,average,quantities,returning,group,undated,bars:results} = performanceReport(bookings,from,to,today);
+  const {valid,completed,statusValues,closedBookingValue,handedOver,received,average,quantities,returning,group,undated,bars:results} = useMemo(() => performanceReport(bookings,from,to,today),[bookings,from,to,today]);
   const bars = results.map(bar => ({...bar,value:metric === 'Money' ? bar.money : bar.rentals}));
   const max = Math.max(1, ...bars.map(b => b.value));
   const label = (key: string) => new Date(`${key}T12:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' });

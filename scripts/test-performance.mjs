@@ -72,3 +72,13 @@ assert.ok(html.includes('All time'));assert.ok(html.includes('cp-report-value-gr
 assert.ok(html.includes('About booking values'));assert.ok(!html.includes('<dt>Expired requests</dt>'));
 assert.ok(!html.includes('type="date"'));
 console.log('PASS money rounding and real Performance component rendering, labels, controls and historical-data notice');
+
+// Indexed repeat-customer detection must retain strict-earlier semantics.
+const sameTime=[record('same-a',{customerId:'same'}),record('same-b',{customerId:'same'})];
+assert.equal(lib.performanceReport(sameTime,'2026-10-01','2026-10-08','2026-10-08').returning,0);
+const earlier=record('earlier',{customerId:'same',completedAt:time('2026-09-01T12:00Z')});
+assert.equal(lib.performanceReport([...sameTime,earlier],'2026-10-01','2026-10-08','2026-10-08').returning,1);
+assert.equal(lib.performanceReport([...sameTime,{...earlier,status:'Cancelled'}],'2026-10-01','2026-10-08','2026-10-08').returning,0);
+assert.equal(lib.performanceReport([...sameTime,{...earlier,completedAt:NaN}],'2026-10-01','2026-10-08','2026-10-08').returning,0);
+assert.equal(lib.performanceReport([record('duplicate',{customerId:'same',version:1,completedAt:earlier.completedAt}),record('duplicate',{customerId:'same',version:2})],'2026-10-01','2026-10-08','2026-10-08').returning,0);
+console.log('PASS optimized repeat-customer index: tied times, earlier history, cancelled/invalid events and deduplicated bookings');
